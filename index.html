@@ -3,147 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCP 终端 - 实验专用版</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="text/javascript"></script>
+    <title>区块链金融虚拟仿真实验室 - 暨南大学</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/dist/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --error: #e06c75; }
-        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; }
-        .main-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .sidebar { width: 350px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .debug-console { background: #1a1c1f; color: #98c379; padding: 15px; border-radius: 5px; font-family: monospace; height: 200px; overflow-y: auto; font-size: 13px; border: 1px solid #333; }
-        input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; background: var(--accent); color: white; font-weight: bold; }
-        button:disabled { background: #ccc; }
-        .data-box { background: #34495e; padding: 15px; border-radius: 6px; margin-bottom: 10px; text-align: center; }
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --success: #27ae60; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* 侧边栏样式 */
+        .sidebar { width: 320px; background: var(--primary); color: white; padding: 25px; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; }
+        .sidebar h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; font-size: 1.2rem; }
+        .data-card { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .data-value { font-size: 2rem; font-weight: bold; color: #f1c40f; }
+        .study-notes { font-size: 0.9rem; line-height: 1.6; color: #ecf0f1; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; }
+        .study-notes h3 { color: var(--accent); margin-top: 0; font-size: 1rem; }
+
+        /* 主界面样式 */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .section { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .section h2 { margin-top: 0; color: var(--primary); border-left: 5px solid var(--accent); padding-left: 15px; font-size: 1.2rem; }
+        
+        /* 输入框布局 */
+        .input-group { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .input-group label { width: 100px; font-weight: bold; color: var(--secondary); font-size: 0.9rem; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: monospace; font-size: 0.85rem; }
+        
+        /* 按钮样式 */
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-success { background: var(--success); color: white; margin-right: 10px; }
+        .btn-view { background: #eee; color: #666; padding: 8px 12px; font-size: 1.1rem; }
+        .btn-view:hover { background: #ddd; color: var(--primary); }
+
+        /* 终端样式 */
+        #console { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; height: 250px; overflow-y: auto; font-size: 0.85rem; line-height: 1.5; }
+        .log-info { color: #9cdcfe; }
+        .log-success { color: #b5cea8; }
+        .log-error { color: #f44747; }
     </style>
 </head>
 <body>
 
-<div class="main-panel">
-    <div class="card">
-        <h3>🔗 1. 实验室合约部署</h3>
-        <input type="text" id="input-worklog" placeholder="WorkLog 合约地址 (0x...)" value="">
-        <input type="text" id="input-jcptoken" placeholder="JCPToken 合约地址 (0x...)" value="">
-        <button onclick="connectContracts()">初始化实验连接</button>
+    <div class="sidebar">
+        <h2>📊 宏观经济数据</h2>
+        <div class="data-card">
+            <div>全班总产出 (GCP)</div>
+            <div id="display-gcp" class="data-value">0</div>
+        </div>
+        <div class="data-card">
+            <div>JCP 总供应量</div>
+            <div id="display-supply" class="data-value">0</div>
+        </div>
+
+        <div class="study-notes">
+            <h3>核心学习要点</h3>
+            <p><b>1. 不完全契约 (GHM理论)：</b> 观察在信息不对称下，如何通过区块链智能合约将“事后激励”转化为“事前约束”。</p>
+            <p><b>2. 治理结构：</b> 实验中 WorkLog 合约模拟了过程监管，探讨从行政规制向代码化权力制衡的转变。</p>
+            <p><b>3. 代币激励：</b> JCP 补贴代表了分布式金融中的流动性激励（Mining），思考其对参与者生产行为的影响。</p>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>🛠️ 2. 学生交互区</h3>
-        <button id="btn-work" disabled onclick="doWork()" style="background:var(--primary)">提交生产任务 (Work)</button>
-        <button id="btn-claim" disabled onclick="claim()" style="background:var(--success)">领取 JCP 补贴</button>
-        <p id="user-status" style="color:var(--accent); font-size: 14px; margin-top: 10px;">状态：请先点击初始化</p>
+    <div class="main-content">
+        <div class="section">
+            <h2>🔗 1. 实验室合约部署</h2>
+            <div class="input-group">
+                <label>生产合约</label>
+                <input type="text" id="addr-work" value="0x6226c48798d6992376ad837f43b674586ed5f2e2">
+                <button class="btn btn-view" title="在浏览器查看" onclick="viewOnEtherscan('addr-work')">🔍</button>
+            </div>
+            <div class="input-group">
+                <label>JCP 合约</label>
+                <input type="text" id="addr-jcp" value="0x45e2330787b318d3c498010e8f2a31d93f8f4ea5">
+                <button class="btn btn-view" title="在浏览器查看" onclick="viewOnEtherscan('addr-jcp')">🔍</button>
+            </div>
+            <button class="btn btn-primary" onclick="initLab()">初始化实验连接</button>
+        </div>
+
+        <div class="section">
+            <h2>🛠️ 2. 学生交互区</h2>
+            <button class="btn btn-success" onclick="doWork()">提交生产任务 (Work)</button>
+            <button class="btn btn-success" style="background:#e67e22" onclick="claimJCP()">领取 JCP 补贴</button>
+            <p id="status-tag" style="font-size: 0.8rem; color: #7f8c8d; margin-top: 15px;">⚪ 等待连接区块链实验室...</p>
+        </div>
+
+        <div class="section">
+            <h2>🖥️ 技术诊断终端 (Debug)</h2>
+            <div id="console">> 准备就绪...</div>
+        </div>
     </div>
 
-    <div class="card" style="flex:1">
-        <h3>📟 技术诊断终端 (Debug)</h3>
-        <div id="debug-console" class="debug-console">> 准备就绪...</div>
-    </div>
-</div>
+    <script>
+        let provider, signer, workContract, jcpContract;
+        const workABI = ["function totalWork() public view returns (uint256)", "function performWork() public"];
+        const jcpABI = ["function totalSupply() public view returns (uint256)", "function mintSubsidy() public"];
 
-<div class="sidebar">
-    <h3>📊 宏观经济数据</h3>
-    <div class="data-box">
-        <div style="font-size: 12px; color: #bdc3c7;">全班总产出 (GCP)</div>
-        <div id="val-gcp" style="font-size: 24px;">0</div>
-    </div>
-    <div class="data-box">
-        <div style="font-size: 12px; color: #bdc3c7;">JCP 总供应量</div>
-        <div id="val-supply" style="font-size: 24px;">0</div>
-    </div>
-</div>
-
-<script>
-    let provider, signer, workLogContract, jcpTokenContract;
-
-    function debugLog(msg, isError = false) {
-        const consoleBox = document.getElementById('debug-console');
-        const color = isError ? "#e06c75" : "#98c379";
-        consoleBox.innerHTML += `<div style="color: ${color}">[${new Date().toLocaleTimeString()}] ${isError ? '❌' : '⚙️'} ${msg}</div>`;
-        consoleBox.scrollTop = consoleBox.scrollHeight;
-    }
-
-    // 检查 ethers 是否加载成功
-    window.onload = function() {
-        if (typeof ethers === 'undefined') {
-            debugLog("致命错误：ethers.js 库未能从互联网加载！请检查网络或更换 CDN 链接。", true);
-        } else {
-            debugLog("ethers.js 库加载成功，版本：" + ethers.version);
-        }
-    };
-
-    async function connectContracts() {
-        if (typeof ethers === 'undefined') {
-            alert("脚本库未加载，请刷新页面或检查网络环境。");
-            return;
-        }
-
-        const wAddr = document.getElementById('input-worklog').value.trim();
-        const jAddr = document.getElementById('input-jcptoken').value.trim();
-
-        if (!ethers.utils.isAddress(wAddr) || !ethers.utils.isAddress(jAddr)) {
-            debugLog("地址格式不正确，请重新检查", true);
-            return;
+        function log(msg, type = 'info') {
+            const div = document.getElementById('console');
+            const time = new Date().toLocaleTimeString();
+            div.innerHTML += `<div class="log-${type}">[${time}] ${msg}</div>`;
+            div.scrollTop = div.scrollHeight;
         }
 
-        if (window.ethereum) {
+        function viewOnEtherscan(id) {
+            const addr = document.getElementById(id).value;
+            if(addr) window.open(`https://sepolia.etherscan.io/address/${addr}`, '_blank');
+        }
+
+        async function initLab() {
             try {
-                debugLog("正在申请 MetaMask 连接权限...");
+                if (!window.ethereum) return log("未检测到 MetaMask", "error");
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
-
-                const workLogABI = ["function submitTask() public", "function totalWork() public view returns (uint256)"];
-                const jcpTokenABI = ["function claimSubsidy() public", "function totalSupply() public view returns (uint256)"];
-
-                workLogContract = new ethers.Contract(wAddr, workLogABI, signer);
-                jcpTokenContract = new ethers.Contract(jAddr, jcpTokenABI, signer);
-
-                // 验证读取数据
-                const gcp = await workLogContract.totalWork();
-                debugLog("链路打通！当前 GCP: " + gcp);
-
-                document.getElementById('btn-work').disabled = false;
-                document.getElementById('btn-claim').disabled = false;
-                document.getElementById('user-status').innerText = "✅ 已连接至区块链实验室";
                 
-                // 启动轮询更新
-                setInterval(updateData, 5000);
-            } catch (err) {
-                debugLog("连接失败: " + err.message, true);
-            }
-        } else {
-            debugLog("未检测到钱包插件", true);
+                const addrWork = document.getElementById('addr-work').value;
+                const addrJCP = document.getElementById('addr-jcp').value;
+                
+                workContract = new ethers.Contract(addrWork, workABI, signer);
+                jcpContract = new ethers.Contract(addrJCP, jcpABI, signer);
+                
+                document.getElementById('status-tag').innerText = "✅ 已连接至区块链实验室";
+                log("链路打通！当前网络：" + (await provider.getNetwork()).name, "success");
+                refreshData();
+            } catch (e) { log("连接失败: " + e.message, "error"); }
         }
-    }
 
-    async function updateData() {
-        try {
-            const gcp = await workLogContract.totalWork();
-            const supply = await jcpTokenContract.totalSupply();
-            document.getElementById('val-gcp').innerText = gcp.toString();
-            document.getElementById('val-supply').innerText = Math.round(ethers.utils.formatEther(supply));
-        } catch (e) { console.error(e); }
-    }
+        async function refreshData() {
+            try {
+                const gcp = await workContract.totalWork();
+                const supply = await jcpContract.totalSupply();
+                document.getElementById('display-gcp').innerText = gcp.toString();
+                document.getElementById('display-supply').innerText = ethers.utils.formatEther(supply).split('.')[0];
+            } catch (e) { console.error(e); }
+        }
 
-    async function doWork() {
-        try {
-            debugLog("正在提交生产任务，请在钱包确认...");
-            const tx = await workLogContract.submitTask();
-            debugLog("交易已发送，等待链上确认...");
-            await tx.wait();
-            debugLog("生产任务确认成功！");
-        } catch (e) { debugLog("操作取消: " + e.message, true); }
-    }
+        async function doWork() {
+            try {
+                log("正在提交生产任务...");
+                const tx = await workContract.performWork();
+                await tx.wait();
+                log("生产任务确认成功！", "success");
+                refreshData();
+            } catch (e) { log("任务失败: " + e.message, "error"); }
+        }
 
-    async function claim() {
-        try {
-            debugLog("正在领取补贴...");
-            const tx = await jcpTokenContract.claimSubsidy();
-            await tx.wait();
-            debugLog("JCP 领取成功！");
-        } catch (e) { debugLog("领取失败: " + e.message, true); }
-    }
-</script>
+        async function claimJCP() {
+            try {
+                log("正在领取补贴...");
+                const tx = await jcpContract.mintSubsidy();
+                await tx.wait();
+                log("JCP 领取成功！", "success");
+                refreshData();
+            } catch (e) { log("领取失败: " + e.message, "error"); }
+        }
+    </script>
 </body>
 </html>
