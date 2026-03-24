@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验8：美国商务部GDP数据验证 (SHA256 & 多链存证)</title>
+    <style>
+        :root { --primary: #2563eb; --secondary: #1e293b; --accent: #f59e0b; --bg: #f8fafc; --code-bg: #1e1e1e; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; line-height: 1.6; color: #334155; max-width: 1000px; margin: 0 auto; padding: 30px; background: var(--bg); }
+        
+        /* Header Section */
+        header { border-bottom: 3px solid var(--primary); padding-bottom: 20px; margin-bottom: 40px; }
+        h1 { color: var(--secondary); margin: 0; font-size: 2rem; }
+        .school-tag { font-size: 0.9rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Card Style */
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        h2 { color: var(--primary); border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 0; font-size: 1.5rem; }
+        h3 { color: var(--secondary); margin-top: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+
+        /* Code Blocks */
+        pre { background: var(--code-bg); color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.5; }
+        code { font-family: 'Fira Code', monospace; background: #e2e8f0; padding: 2px 5px; border-radius: 4px; color: #e11d48; font-size: 0.9em; }
+        pre code { background: none; color: inherit; padding: 0; }
+        .pwsh-prompt { color: #4ade80; font-weight: bold; }
+
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+        th { background: #f1f5f9; text-align: left; padding: 12px; border: 1px solid #e2e8f0; color: var(--secondary); }
+        td { padding: 12px; border: 1px solid #e2e8f0; }
+        tr:hover { background: #f8fafc; }
+
+        /* Highlights */
+        .step-num { display: inline-block; background: var(--primary); color: white; width: 24px; height: 24px; text-align: center; border-radius: 50%; font-size: 14px; margin-right: 10px; }
+        .edu-note { background: #eff6ff; border-left: 4px solid var(--primary); padding: 15px; border-radius: 4px; margin-top: 20px; font-size: 14px; }
+        .edu-note b { color: var(--primary); }
+        
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .solidity-comment { color: #6a9955; }
+        .solidity-keyword { color: #569cd6; }
+        .solidity-variable { color: #9cdcfe; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="school-tag">Jinan University · Fintech Lab</div>
+    <h1>实验 8：美国商务部 GDP 数据验证</h1>
+    <p style="color: #64748b;">通过 SHA256 哈希算法与多链存证技术确保宏观经济数据的真实性</p>
+</header>
+
+<div class="card">
+    <h2>实验目的</h2>
+    <p>掌握采用 <b>PowerShell 命令</b> 计算文件的 SHA256 哈希值，并利用全球主流区块链浏览器验证美国商务部（BEA）发布的季度 GDP 数据是否被篡改，理解“链上存证（On-chain Attestation）”的实际应用。</p>
+</div>
+
+<div class="card">
+    <h2>实验步骤</h2>
+
+    <h3><span class="step-num">1</span> 准备官方数据</h3>
+    <ul>
+        <li><b>下载 PDF：</b> <a href="https://www.bea.gov/sites/default/files/2025-08/gdp2q25-2nd.pdf" target="_blank">BEA Q2 2025 GDP Report</a></li>
+        <li><b>官方哈希：</b> <code>c70972a12908b73c2407d9cc6842ba2a02203a690f3090cd29f30c45f0cfd93d</code></li>
+    </ul>
+
+    <h3><span class="step-num">2</span> 本地哈希校验 (PowerShell)</h3>
+    <p>启动 PowerShell 7，输入以下命令对比本地文件指纹：</p>
+    <pre><span class="pwsh-prompt">PS ></span> Get-FileHash -Path "C:\Downloads\gdp2q25-2nd.pdf" -Algorithm SHA256</pre>
+    <p>验证结果应如下图所示：</p>
+    <table>
+        <tr><th>Algorithm</th><th>Hash</th></tr>
+        <tr><td>SHA256</td><td>c70972a12908b73c2407...f0cfd93d</td></tr>
+    </table>
+
+    <h3><span class="step-num">3</span> 跨链上链记录查询</h3>
+    <p>美国商务部 BEA 将数据发布到了 9 条区块链。选择以下任意浏览器输入对应的交易哈希（TX Hash）进行验证：</p>
+    <table>
+        <thead>
+            <tr><th>区块链</th><th>推荐浏览器</th><th>验证方式</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Bitcoin</td><td><a href="https://mempool.space" target="_blank">mempool.space</a></td><td>查找 <b>OP_RETURN</b> 字段</td></tr>
+            <tr><td>Ethereum</td><td><a href="https://etherscan.io" target="_blank">Etherscan</a></td><td>查看合约 <b>Read Contract</b> 页面</td></tr>
+            <tr><td>Solana</td><td><a href="https://solscan.io" target="_blank">Solscan</a></td><td>查看交易 <b>Instruction Data</b></td></tr>
+            <tr><td>Polygon</td><td><a href="https://polygonscan.com" target="_blank">PolygonScan</a></td><td>查询指定合约地址状态</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>合约内容解读 (Solidity)</h2>
+    <p>以下为部署在以太坊及其二层网络（Arbitrum, Optimism等）上的核心存证逻辑：</p>
+    <pre>
+<span class="solidity-keyword">pragma solidity</span> ^0.8.0;
+
+<span class="solidity-keyword">contract</span> HashStorage { 
+    <span class="solidity-comment">// 存储官方 PDF 的 SHA256 指纹</span>
+    <span class="solidity-keyword">bytes32 public</span> gdp_pdf_hash; 
+    
+    <span class="solidity-comment">// 存储 GDP 数值 (单位：0.1%)</span>
+    <span class="solidity-keyword">uint256 public</span> gdp_q2_2025; 
+    
+    <span class="solidity-comment">// 上链时间戳</span>
+    <span class="solidity-keyword">uint256 public</span> timestamp;
+
+    <span class="solidity-keyword">constructor</span>(<span class="solidity-keyword">bytes32</span> _hash, <span class="solidity-keyword">uint256</span> _data) {
+        gdp_pdf_hash = _hash;
+        gdp_q2_2025 = _data;
+        timestamp = <span class="solidity-variable">block</span>.timestamp;
+    }
+}</pre>
+</div>
+
+<div class="card" style="border-top: 4px solid var(--accent);">
+    <h2>总结与教学要点</h2>
+    <div class="edu-note">
+        <p>1. <b>哈希脱敏与降本：</b> 链上仅存储 32 字节的 <code>bytes32</code> 哈希值而非整个 PDF，既保护了存储资源，又实现了对大文件真实性的“一票否决制”校验。</p>
+        <p>2. <b>存在性证明 (PoE)：</b> 区块链提供的 <code>timestamp</code> 证明了该数据在 2025 年 8 月 28 日即已存在，任何事后篡改都无法同步修改历史区块时间。</p>
+        <p>3. <b>静态不可逆性：</b> 该合约未定义 <code>update</code> 函数，符合统计数据的“公报”特质——一旦发布，永久定格，不可撤回。</p>
+    </div>
+</div>
+
+<footer>
+    <p style="text-align: center; color: #94a3b8; font-size: 0.8rem;">
+        &copy; 2026 暨南大学区块链金融实验课程 · 基于美国商务部 BEA 真实案例改编
+    </p>
+</footer>
+
+</body>
+</html>
