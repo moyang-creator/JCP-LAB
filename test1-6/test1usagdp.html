@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验1：美国商务部 GDP 数据验证 (SHA256 & 多链存证)</title>
+    <style>
+        :root { --primary: #2563eb; --secondary: #1e293b; --accent: #f59e0b; --bg: #f8fafc; --code-bg: #1e1e1e; }
+        body { font-family: 'Inter', system-ui, sans-serif; line-height: 1.6; color: #334155; max-width: 1000px; margin: 0 auto; padding: 30px; background: var(--bg); }
+        header { border-bottom: 3px solid var(--primary); padding-bottom: 20px; margin-bottom: 40px; }
+        h1 { color: var(--secondary); margin: 0; font-size: 1.8rem; }
+        .school-tag { font-size: 0.8rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+        .card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        h2 { color: var(--primary); border-left: 5px solid var(--primary); padding-left: 15px; margin-top: 0; font-size: 1.4rem; }
+        pre { background: var(--code-bg); color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: 'Fira Code', monospace; font-size: 13px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+        th { background: #f1f5f9; text-align: left; padding: 10px; border: 1px solid #e2e8f0; }
+        td { padding: 10px; border: 1px solid #e2e8f0; word-break: break-all; }
+        .step-num { display: inline-block; background: var(--primary); color: white; width: 22px; height: 22px; text-align: center; border-radius: 50%; font-size: 13px; margin-right: 8px; }
+        .edu-note { background: #eff6ff; border-left: 4px solid var(--primary); padding: 15px; border-radius: 4px; font-size: 14px; }
+        a { color: var(--primary); text-decoration: none; font-weight: 500; }
+        a:hover { text-decoration: underline; }
+        code { font-family: 'Fira Code', monospace; background: #e2e8f0; padding: 2px 4px; border-radius: 4px; color: #e11d48; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="school-tag">Jinan University · Blockchain Finance Lab</div>
+    <h1>实验 1：美国商务部 GDP 数据验证</h1>
+    <p style="color: #64748b;">验证宏观经济数据的“链上指纹”：从政府官网到分布式账本</p>
+</header>
+
+<div class="card">
+    <h2>实验目的</h2>
+    <p>通过访问美国商务部经济分析局（BEA）官网获取原始 GDP 报告，利用 <b>PowerShell</b> 自行计算文件哈希，并与分布在全球 9 条区块链上的合约数据进行交叉验证，掌握区块链“存证确认”的闭环流程。</p>
+</div>
+
+<div class="card">
+    <h2>实验步骤</h2>
+
+    <h3><span class="step-num">1</span> 准备官方数据</h3>
+    <p>请访问美国商务部经济分析局 (BEA) 的 GDP 发布主页，寻找并下载最新的季度 GDP 报告 PDF 文件（通常为 <i>Full Release & Tables</i>）：</p>
+    <ul>
+        <li><b>数据主页：</b> <a href="https://www.bea.gov/data/gdp/gross-domestic-product" target="_blank">BEA: Gross Domestic Product (GDP) Main Page</a></li>
+        <li><b>实验参考哈希 (Q2 2025)：</b> <code>c70972a12908b73c2407d9cc6842ba2a02203a690f3090cd29f30c45f0cfd93d</code></li>
+    </ul>
+
+    <h3><span class="step-num">2</span> 本地哈希校验 (PowerShell)</h3>
+    <p>在 Windows 环境下右键点击“开始”，启动 <b>PowerShell</b>，输入以下命令计算下载文件的哈希值：</p>
+    <pre>Get-FileHash -Path "您的文件下载路径\gdp_report.pdf" -Algorithm SHA256</pre>
+
+    <h3><span class="step-num">3</span> 跨链上链记录查询 (9大主流区块链)</h3>
+    <p>美国商务部 BEA 采用了多链冗余发布策略。请选择对应的浏览器，输入下方的<b>合约地址/TXID</b> 验证链上存储的 <code>gdp_pdf_hash</code> 变量是否与你本地计算的结果一致：</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 15%;">区块链 (Network)</th>
+                <th style="width: 25%;">区块链浏览器 (Explorer)</th>
+                <th style="width: 60%;">合约地址 / 交易哈希 (Contract / TXID)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Bitcoin</td><td><a href="https://blockchair.com/bitcoin" target="_blank">Blockchair</a></td><td><code>fcf172401ca9d89013f13f5bbf0fc7577cb8a3588bf5cbc3b458ff36635fec00</code> (OP_RETURN)</td></tr>
+            <tr><td>Ethereum</td><td><a href="https://etherscan.io" target="_blank">Etherscan</a></td><td><code>0x36ccdF11044f60F196e981970d592a7DE567ed7b</code></td></tr>
+            <tr><td>Solana</td><td><a href="https://solscan.io" target="_blank">Solscan</a></td><td><code>43dJVBK4hiXy1rpC5BifT8LU2NDNHKmdWyqyYDaTfyEeX8y3LMtUtajW3Q22rCSbmneny56CBtkictQRQJXV1ybp</code></td></tr>
+            <tr><td>TRON</td><td><a href="https://tronscan.org" target="_blank">Tronscan</a></td><td><code>3f05633fb894aa6d6610c980975cca732a051edbbf5d8667799782cf2ae04040</code></td></tr>
+            <tr><td>Stellar</td><td><a href="https://stellar.expert" target="_blank">Stellar Expert</a></td><td><code>89e4d300d237db6b67c510f71c8cd2f690868806a6b40a40a5a9755f4954144a</code></td></tr>
+            <tr><td>Avalanche</td><td><a href="https://snowtrace.io" target="_blank">Snowtrace</a></td><td><code>0x36ccdF11044f60F196e981970d592a7DE567ed7b</code></td></tr>
+            <tr><td>Arbitrum One</td><td><a href="https://arbiscan.io" target="_blank">Arbiscan</a></td><td><code>0x36ccdF11044f60F196e981970d592a7DE567ed7b</code></td></tr>
+            <tr><td>Polygon</td><td><a href="https://polygonscan.com" target="_blank">PolygonScan</a></td><td><code>0x36ccdF11044f60F196e981970d592a7DE567ed7b</code></td></tr>
+            <tr><td>Optimism</td><td><a href="https://optimistic.etherscan.io" target="_blank">Optimism Explorer</a></td><td><code>0x36ccdF11044f60F196e981970d592a7DE567ed7b</code></td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h2>核心原理总结</h2>
+    <div class="edu-note">
+        <p><b>为什么要在 9 条链上同时发布？</b></p>
+        <ul>
+            <li><b>抗审查性：</b> 即使某条链发生拥堵或技术故障，其他 8 条链依然能提供证据支持。</li>
+            <li><b>全球独立审计：</b> 任何国家的个人、机构都可以通过自己信任的链进行独立验证，无需通过 BEA 内部系统，实现了宏观经济数据的“最高等级透明度”。</li>
+        </ul>
+    </div>
+</div>
+
+<footer>
+    <p style="text-align: center; color: #94a3b8; font-size: 0.8rem;">
+        &copy; 2026 暨南大学区块链金融实验课程 (JCP-LAB) · 版本号 2026.2.13
+    </p>
+</footer>
+
+</body>
+</html>

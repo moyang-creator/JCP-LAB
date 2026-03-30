@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCP-LAB：区块链金融逻辑实验门户</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; margin: 0; padding: 40px 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 50px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+        h1 { color: var(--primary); font-size: 2.2rem; margin-bottom: 10px; }
+        .subtitle { color: #64748b; font-size: 1.1rem; }
+        
+        .experiment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .exp-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; 
+            display: flex; flex-direction: column; transition: all 0.3s ease;
+            text-decoration: none; color: inherit; position: relative;
+        }
+        .exp-card:hover { 
+            transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
+        }
+        .exp-num { 
+            position: absolute; top: 15px; right: 15px; background: #eff6ff; color: var(--primary); 
+            width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; font-weight: bold; font-size: 0.8rem;
+        }
+        .exp-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; padding-right: 30px; }
+        .exp-desc { color: #475569; font-size: 0.9rem; flex-grow: 1; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569; font-size: 0.75rem; margin-top: 15px; align-self: flex-start; }
+        
+        footer { text-align: center; margin-top: 60px; color: #94a3b8; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>区块链金融逻辑实验库</h1>
+        <p class="subtitle">JCP-LAB：从底层验证到业务逻辑的全栈演示</p>
+    </header>
+
+    <div class="experiment-grid">
+        
+        <a href="test1usagdp.html" class="exp-card">
+            <div class="exp-num">1</div>
+            <div class="exp-title">GDP 数据指纹验证</div>
+            <div class="exp-desc">使用 PowerShell 计算美国商务部 GDP 报告的 SHA256 哈希值，并与 9 大主流区块链上的存证记录进行比对，验证数据真实性。</div>
+            <span class="tag">数据审计 / 多链存证</span>
+        </a>
+
+        <a href="test2MerkleTree.html" class="exp-card">
+            <div class="exp-num">2</div>
+            <div class="exp-title">Merkle Tree 状态模拟</div>
+            <div class="exp-desc">可视化演示梅克尔树的级联哈希结构。观察底层账户变动如何实时重塑 StateRoot，理解区块链不可篡改性的数学基础。</div>
+            <span class="tag">底层结构 / 数据安全性</span>
+        </a>
+
+        <a href="test3Layers.html" class="exp-card">
+            <div class="exp-num">3</div>
+            <div class="exp-title">L3 → L1 跨层通信</div>
+            <div class="exp-desc">模拟应用链（L3）与结算层（L1）之间的状态同步逻辑，展示扩容架构下跨层消息传递与状态确认的完整流程。</div>
+            <span class="tag">跨层架构 / 状态同步</span>
+        </a>
+
+        <a href="test4dYdXdeal.html" class="exp-card">
+            <div class="exp-num">4</div>
+            <div class="exp-title">dYdX v4 撮合引擎</div>
+            <div class="exp-desc">演示高性能链下订单簿撮合机制。实时观察买卖盘匹配如何驱动账户状态更新，并最终锚定到区块链账本。</div>
+            <span class="tag">交易系统 / 高频撮合</span>
+        </a>
+
+        <a href="test5DeFidemo.html" class="exp-card">
+            <div class="exp-num">5</div>
+            <div class="exp-title">DeFi 风险阶梯演示</div>
+            <div class="exp-desc">模拟 5 级抵押率账户在价格崩盘时的连锁反应。直观展示健康因子 (HF) 触发自动清算并记录至哈希链的过程。</div>
+            <span class="tag">清算机制 / 风险控制</span>
+        </a>
+
+        <a href="test6JCPlab.html" class="exp-card">
+            <div class="exp-num">6</div>
+            <div class="exp-title">JCPlab 综合案例</div>
+            <div class="exp-desc">区块链金融实验室综合应用演示。整合了本课程核心模块的交互功能，用于模拟复杂的业务场景与链路追踪。</div>
+            <span class="tag">综合应用 / 链路分析</span>
+        </a>
+
+    </div>
+
+    <footer>
+        &copy; 2026 暨南大学经济学院 · 区块链金融实验课程 (JCP-LAB)
+    </footer>
+</div>
+
+</body>
+</html>
