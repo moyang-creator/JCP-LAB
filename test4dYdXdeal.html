@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>dYdX v4 撮合与状态同步演示</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root { --bg: #f8fafc; --dydx-blue: #6966ff; --success: #22c55e; --danger: #ef4444; }
+        body { background: var(--bg); color: #1e293b; font-family: 'Inter', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        .layout { display: flex; flex: 1; gap: 20px; overflow: hidden; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        
+        /* 订单簿样式 */
+        #order-panel { width: 320px; }
+        .order-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .btn-match { background: var(--dydx-blue); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: auto; }
+        .btn-match:hover { opacity: 0.9; }
+
+        /* 状态树样式 */
+        #tree-panel { flex: 1; position: relative; align-items: center; }
+        #tree-wrapper { width: 100%; display: flex; flex-direction: column-reverse; align-items: center; justify-content: space-around; flex: 1; padding: 20px 0; }
+        .tree-layer { display: flex; justify-content: center; width: 100%; gap: 8px; }
+        .node { width: 42px; height: 24px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 3px; font-size: 8px; display: flex; align-items: center; justify-content: center; font-family: monospace; transition: all 0.5s; }
+        .node.root { width: 120px; height: 36px; border: 2px solid var(--dydx-blue); font-size: 11px; font-weight: bold; }
+        .changed { background: #fee2e2 !important; border-color: var(--danger) !important; color: var(--danger) !important; transform: scale(1.1); font-weight: bold; }
+
+        /* 交易动画日志 */
+        #log-panel { width: 260px; font-size: 12px; }
+        .log-entry { border-left: 3px solid var(--success); padding-left: 8px; margin-bottom: 8px; animation: slideIn 0.3s; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+        
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+<header style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <h1 style="margin:0; font-size: 22px; color: var(--dydx-blue);">dYdX v4 撮合引擎：从交易到 StateRoot</h1>
+    <div style="background: #e0e7ff; color: var(--dydx-blue); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">应用链 (App-Chain) 模拟器</div>
+</header>
+
+<div class="layout">
+    <div class="card" id="order-panel">
+        <h3 style="margin-top:0;">⚡ 撮合指令 (Match)</h3>
+        <p style="font-size: 12px; color: #64748b;">模拟 User A (买方) 与 User B (卖方) 成交：</p>
+        
+        <div class="order-row">
+            <label>成交金额:</label>
+            <input type="number" id="trade-amount" value="20" style="width: 80px; padding: 5px; border: 1px solid #ddd;">
+        </div>
+
+        <div style="margin: 15px 0; padding: 10px; background: #f8fafc; border-radius: 8px; font-size: 13px;">
+            <div style="color: var(--success);">● User A (Buyer) 余额将 +</div>
+            <div style="color: var(--danger);">● User B (Seller) 余额将 -</div>
+        </div>
+
+        <button class="btn-match" onclick="executeMatch()">🚀 执行原子撮合 (Atomic Match)</button>
+        
+        <div style="margin-top: 20px; font-size: 11px; color: #94a3b8; line-height: 1.5;">
+            * 在 dYdX v4 中，此撮合过程由验证者在内存中完成，随后更新 Merkle Tree。
+        </div>
+        <div style="margin-top: 20px; padding: 12px; background: #f0f7ff; border-left: 4px solid #2563eb; border-radius: 4px; font-size: 12px; line-height: 1.6; color: #1e293b;">
+    <h4 style="margin: 0 0 8px 0; color: #2563eb; font-size: 14px;">📖 核心原理：高性能撮合与状态同步</h4>
+    <p>
+        1. <b>订单簿链下撮合 (Off-chain Matching)</b>：dYdX v4 为了实现毫秒级体验，将撮合逻辑放在内存中运行。每一对买卖盘的成功匹配，都会立即生成一笔交易指纹。<br>
+        2. <b>状态根的确定性更新 (Deterministic State)</b>：虽然撮合飞快，但每笔成交必须修改余额。通过 <b>Merkle Tree</b>，我们将复杂的成千上万个账户余额压缩为一个 32 字节的 <b>StateRoot</b>。<br>
+        3. <b>从业务到账本的传导</b>：左侧看到的每一行成交记录，都在实时重塑中间的梅克尔路径。这种“业务驱动状态，状态锁定账本”的模式，是高性能去中心化交易所（DEX）能与中心化交易所（CEX）竞争的技术基石。
+    </p>
+</div>
+    </div>
+
+    <div class="card" id="tree-panel">
+        <h3 style="margin:0; font-size: 14px; color: #64748b;">实时全球状态树 (Global State Tree)</h3>
+        <div id="tree-wrapper">
+            <svg id="line-canvas"></svg>
+        </div>
+    </div>
+
+    <div class="card" id="log-panel">
+        <h3 style="margin-top:0;">📋 交易回执 (Event Log)</h3>
+        <div id="logs" style="overflow-y: auto; flex: 1;">
+            <div style="color:#94a3b8; text-align:center; margin-top:20px;">等待成交...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let users = Array.from({length: 16}, (_, i) => ({ id: String.fromCharCode(65 + i), balance: 100 }));
+    let baseHashes = [];
+
+    function getHash(t) { return CryptoJS.SHA256(t).toString().substring(0, 8); }
+
+    function executeMatch() {
+        const amount = parseInt(document.getElementById('trade-amount').value);
+        if(users[1].balance < amount) return alert("User B 余额不足！");
+
+        // 逻辑更新
+        users[0].balance += amount; // User A +
+        users[1].balance -= amount; // User B -
+
+        // 记录日志
+        const log = document.getElementById('logs');
+        if(log.innerText.includes("等待")) log.innerHTML = "";
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
+        entry.innerHTML = `<strong>Trade Executed</strong><br>A: +${amount} | B: -${amount}<br><span style="font-size:10px; color:#94a3b8;">TS: ${new Date().toLocaleTimeString()}</span>`;
+        log.prepend(entry);
+
+        renderTree();
+    }
+
+    function renderTree() {
+        let layers = [];
+        let current = users.map(u => getHash(u.id + u.balance));
+        layers.push(current);
+        for (let i = 0; i < 4; i++) {
+            let next = [];
+            for (let j = 0; j < current.length; j += 2) {
+                next.push(getHash(current[j] + current[j+1]));
+            }
+            current = next;
+            layers.push(current);
+        }
+
+        if(baseHashes.length === 0) baseHashes = layers.map(l => [...l]);
+
+        const wrapper = document.getElementById('tree-wrapper');
+        const old = wrapper.querySelectorAll('.tree-layer');
+        old.forEach(o => o.remove());
+
+        layers.forEach((layer, lIdx) => {
+            const div = document.createElement('div');
+            div.className = "tree-layer";
+            div.innerHTML = layer.map((h, nIdx) => {
+                const isChanged = h !== baseHashes[lIdx][nIdx];
+                return `<div class="node ${lIdx===4?'root':''} ${isChanged?'changed':''}" id="n-${lIdx}-${nIdx}">${h}</div>`;
+            }).join('');
+            wrapper.appendChild(div);
+        });
+        setTimeout(drawLines, 50);
+    }
+
+    function drawLines() {
+        const svg = document.getElementById('line-canvas');
+        svg.innerHTML = '';
+        const rect = document.getElementById('tree-wrapper').getBoundingClientRect();
+        for (let l = 0; l < 4; l++) {
+            for (let n = 0; n < Math.pow(2, 4-l); n++) {
+                const c = document.getElementById(`n-${l}-${n}`);
+                const p = document.getElementById(`n-${l+1}-${Math.floor(n/2)}`);
+                const cR = c.getBoundingClientRect(); const pR = p.getBoundingClientRect();
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", cR.left + cR.width/2 - rect.left);
+                line.setAttribute("y1", cR.top - rect.top);
+                line.setAttribute("x2", pR.left + pR.width/2 - rect.left);
+                line.setAttribute("y2", pR.bottom - rect.top);
+                const isRed = c.classList.contains('changed') && p.classList.contains('changed');
+                line.setAttribute("stroke", isRed ? "#ef4444" : "#e2e8f0");
+                line.setAttribute("stroke-width", isRed ? "3" : "1");
+                svg.appendChild(line);
+            }
+        }
+    }
+
+    window.onresize = drawLines;
+    renderTree();
+</script>
+</body>
+</html>
