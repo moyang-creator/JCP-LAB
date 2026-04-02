@@ -5,22 +5,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCP 终端 - 实验室专用版 (v2.0 闭环版)</title>    
+    <title>JCP 终端 - 实验室专用版</title>    
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --error: #e06c75; --light-bg: #f8f9fa; }
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
         
+        /* 左侧主面板：自适应宽度 */
         .main-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; min-width: 600px; }
+        
+        /* 右侧侧边栏：固定宽度 350px */
         .sidebar { width: 350px; min-width: 350px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; }
         
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .card h3 { margin-top: 0; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1rem; }
         
+        /* 输入框与按钮组布局 */
         .input-item { margin-bottom: 12px; }
         .input-item label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
         .input-group { display: flex; gap: 8px; }
         input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; background: var(--light-bg); }
         
+        /* 终端样式 */
         .debug-console { background: #1a1c1f; color: #98c379; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; height: 220px; overflow-y: auto; font-size: 12px; border: 1px solid #333; line-height: 1.6; }
         
         button { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; background: var(--accent); color: white; font-weight: bold; transition: 0.2s; }
@@ -28,6 +33,7 @@
         button:disabled { background: #ccc; cursor: not-allowed; }
         .btn-browser { background: #6c757d; font-size: 12px; padding: 8px 10px; }
 
+        /* 侧边栏数据与文字 */
         .data-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .study-notes { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px; line-height: 1.7; color: #dcdde1; }
         .study-notes h4 { color: #f1c40f; margin-top: 0; margin-bottom: 10px; border-bottom: 1px dotted #f1c40f; padding-bottom: 5px; }
@@ -56,15 +62,9 @@
     </div>
 
     <div class="card">
-        <h3>🛠️ 2. 学生交互区 (实验 7 闭环版)</h3>
-        <div class="input-item">
-            <label>Arweave 报告存证链接 (实验 7 产出)</label>
-            <div class="input-group">
-                <input type="text" id="arweave-link" placeholder="在此粘贴 Arweave 永久链接，例如: https://arweave.net/...">
-            </div>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button id="btn-work" disabled onclick="doWork()" style="flex:1; background:var(--primary)">🏗️ 提交生产任务 (锚定存证)</button>
+        <h3>🛠️ 2. 学生交互区</h3>
+        <div style="display: flex; gap: 10px;">
+            <button id="btn-work" disabled onclick="doWork()" style="flex:1; background:var(--primary)">🏗️ 提交生产任务 (Work)</button>
             <button id="btn-claim" disabled onclick="claim()" style="flex:1; background:var(--success)">💰 领取 JCP 补贴</button>
         </div>
         <p id="user-status" style="color:var(--accent); font-size: 13px; margin-top: 12px; font-weight: bold;">状态：请先点击初始化</p>
@@ -89,10 +89,10 @@
 
     <div class="study-notes">
         <h4>📖 实验学习要点</h4>
-        <p><b>1. 永久存储与存证：</b> 实验 7 通过 Arweave 确保存证内容永不丢失，并将其链接锚定在 Sepolia 账本上。</p>
-        <p><b>2. 跨链闭环：</b> 观察数据（Arweave）如何与逻辑（Ethereum）结合，形成完整的 Web3 基础设施视图。</p>
-        <p><b>3. 宏观指标：</b> GCP 指标实时反映了全班通过 Arweave 存储作业所创造的“数据价值”。</p>
-        <p><b>4. 手续费(Gas)：</b> 每次将 Arweave 链接存入 Sepolia 都会产生微小的 Gas 消耗，体验“写数据到链”的成本感。</p>
+        <p><b>1. 机器信用替代人为信用：</b> 生产活动通过智能合约实时存证，解决了传统统计中“报表造假”的可能性。</p>
+        <p><b>2. 价值按贡献实时分配：</b> 观察 Work 行为如何直接触发代币权益。这体现了 Web3 经济中“行为即价值”的核心逻辑。</p>
+        <p><b>3. 宏观指标的高频化：</b> 传统 GDP 为季度统计，而在区块链环境下，GCP（全班总产出）是秒级更新的实时宏观数据。</p>
+        <p><b>4. 手续费(Gas)与资源消耗：</b> 观察每次交互时 MetaMask 消耗的 Gas，理解去中心化计算的成本本质。</p>
     </div>
 </div>
 
@@ -106,6 +106,7 @@
         consoleBox.scrollTop = consoleBox.scrollHeight;
     }
 
+    // 跳转浏览器
     function openEtherscan(inputId) {
         const addr = document.getElementById(inputId).value.trim();
         if (ethers.utils.isAddress(addr)) {
@@ -117,7 +118,7 @@
 
     window.onload = function() {
         if (typeof ethers === 'undefined') {
-            debugLog("致命错误：ethers.js 加载失败！请检查 CDN 网络连接。", true);
+            debugLog("致命错误：ethers.js 加载失败！", true);
         } else {
             debugLog("ethers.js 库加载成功，版本：" + ethers.version);
         }
@@ -139,8 +140,7 @@
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
 
-                // 更新 ABI：如果合约 submitTask 接受链接字符串，则对应修改
-                const workLogABI = ["function submitTask(string data) public", "function totalWork() public view returns (uint256)"];
+                const workLogABI = ["function submitTask() public", "function totalWork() public view returns (uint256)"];
                 const jcpTokenABI = ["function claimSubsidy() public", "function totalSupply() public view returns (uint256)"];
 
                 workLogContract = new ethers.Contract(wAddr, workLogABI, signer);
@@ -151,7 +151,7 @@
 
                 document.getElementById('btn-work').disabled = false;
                 document.getElementById('btn-claim').disabled = false;
-                document.getElementById('user-status').innerText = "✅ 已连接至区块链实验室 (v2.0)";
+                document.getElementById('user-status').innerText = "✅ 已连接至区块链实验室";
                 
                 updateData();
                 setInterval(updateData, 5000);
@@ -172,23 +172,15 @@
         } catch (e) { console.error("数据同步错误", e); }
     }
 
-    // 升级版提交函数：接收输入框中的 Arweave 链接
     async function doWork() {
-        const arLink = document.getElementById('arweave-link').value.trim();
-        
-        if (!arLink.startsWith("https://arweave.net/")) {
-            debugLog("错误：请先完成实验 7，并填入正确的 Arweave 永久链接！", true);
-            return;
-        }
-
         try {
-            debugLog("正在将 Arweave 链接提交至 Sepolia 链，请在钱包确认...");
-            const tx = await workLogContract.submitTask(arLink);
-            debugLog("交易已发送，等待链上存证确认...");
+            debugLog("正在提交生产任务，请在钱包确认...");
+            const tx = await workLogContract.submitTask();
+            debugLog("交易已发送，等待链上确认...");
             await tx.wait();
-            debugLog("🎉 存证成功！您的实验报告已通过跨链锚定永久锁定。");
+            debugLog("生产任务确认成功！");
             updateData();
-        } catch (e) { debugLog("提交取消: " + e.message, true); }
+        } catch (e) { debugLog("操作取消: " + e.message, true); }
     }
 
     async function claim() {
