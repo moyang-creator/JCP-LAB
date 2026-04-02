@@ -21,11 +21,20 @@
         .exp-card:hover { 
             transform: translateY(-5px); border-color: var(--primary); box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.1);
         }
+        /* 预留位样式：灰色虚线边框 */
+        .exp-card.placeholder {
+            border: 2px dashed #e2e8f0; background: transparent; cursor: default;
+        }
+        .exp-card.placeholder:hover { transform: none; box-shadow: none; border-color: #cbd5e1; }
+        .exp-card.placeholder .exp-title, .exp-card.placeholder .exp-desc { color: #94a3b8; }
+
         .exp-num { 
             position: absolute; top: 15px; right: 15px; background: #eff6ff; color: var(--primary); 
             width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; 
             justify-content: center; font-weight: bold; font-size: 0.8rem;
         }
+        .exp-card.placeholder .exp-num { background: #f1f5f9; color: #94a3b8; }
+
         .exp-title { font-size: 1.2rem; font-weight: bold; color: var(--primary); margin-bottom: 10px; padding-right: 30px; }
         .exp-desc { color: #475569; font-size: 0.9rem; flex-grow: 1; }
         .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #f1f5f9; color: #475569; font-size: 0.75rem; margin-top: 15px; align-self: flex-start; }
@@ -85,12 +94,14 @@
             <span class="tag">综合应用 / 链路分析</span>
         </a>
 
-    </div>
+        <a href="test7Arweave.html" class="exp-card">
+            <div class="exp-num">7</div>
+            <div class="exp-title">Arweave 永久存储锚定</div>
+            <div class="exp-desc">验证 Web3 存储的“永恒性”。将实验报告上传至 Arweave 网络，并将其数据交易 ID (TX ID) 锚定在 Sepolia 账本完成存证闭环。</div>
+            <span class="tag">分布式存储 / 跨链存证</span>
+        </a>
 
-    <footer>
-        &copy; 2026 暨南大学经济学院 · 区块链金融实验课程 (JCP-LAB)
-    </footer>
-</div>
-
-</body>
-</html>
+        <div class="exp-card placeholder">
+            <div class="exp-num">8</div>
+            <div class="exp-title">实验 8：待发布</div>
+            <div class="exp-desc">即将上线：新的区块链金融逻辑实验模块，敬请期待。

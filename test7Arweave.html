@@ -1,0 +1,66 @@
+<section class="experiment-section" id="experiment-7">
+    <h2>实验 7：去中心化永久存储与跨链锚定</h2>
+    <p class="description">
+        验证 Web3 存储的“永恒性”：从 Arweave 分布式网络到以太坊存证中心
+    </p>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>| 实验目的</h3>
+        </div>
+        <div class="card-body">
+            <p>
+                通过使用 <strong>Arweave</strong> 协议及其图形化工具 <strong>ArDrive</strong>，学习将文件永久锁定在区块链上。掌握通过 <strong>Data Transaction ID</strong> 实现“跨链锚定”的技术路径，构建从数据存储到链上存证的闭环逻辑。
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>| 实验步骤</h3>
+        </div>
+        <div class="card-body">
+            <div class="step-item">
+                <h4>➊ 准备 Arweave 钱包与测试币 (AR)</h4>
+                <p>请安装 <strong>ArConnect</strong> 浏览器插件并创建钱包。存储文件需要消耗极少量的 AR 代币，请根据自身情况选择以下一种方案领取：</p>
+                
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #3498db;">
+                    <strong>方案 A：自助申请 (推荐，体验 Web3 生态)</strong>
+                    <ul>
+                        <li>访问官方水龙头：<a href="https://faucet.arweave.net/" target="_blank">faucet.arweave.net</a></li>
+                        <li><strong>操作：</strong>连接钱包并按照提示发送一条包含地址的推文 (Twitter/X)。</li>
+                        <li><strong>优点：</strong>独立获取资源，额度较高 (约 0.02 AR)。</li>
+                    </ul>
+                </div>
+
+                <div style="background: #fff9db; padding: 15px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #f1c40f;">
+                    <strong>方案 B：课堂分发 (快速通道)</strong>
+                    <ul>
+                        <li><strong>操作：</strong>将你的 ArConnect 钱包地址复制并发送至班级教学群或教学台。</li>
+                        <li><strong>分发：</strong>教师将统一分发 <strong>0.005 AR</strong> 启动资金。</li>
+                        <li><strong>注意：</strong>该额度足以支持本次实验的 PDF 上传及存证。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-item">
+                <h4>➋ 去中心化文件上链 (ArDrive)</h4>
+                <p>访问 <a href="https://ardrive.io/" target="_blank">ArDrive</a> 并连接钱包：</p>
+                <ul>
+                    <li>新建一个 <strong>Public Drive</strong>（公共驱动器）。</li>
+                    <li>上传你的实验总结报告，并在详情中获取 <strong>Data Transaction ID</strong>。</li>
+                    <li>永久链接：<code>https://arweave.net/[你的ID]</code>。</li>
+                </ul>
+            </div>
+
+            <div class="step-item">
+                <h4>➌ 跨链锚定存证 (JCP Terminal)</h4>
+                <p>打开 <strong>JCP 终端 v2.0</strong> 页面：</p>
+                <ul>
+                    <li>粘贴 Arweave 链接至输入框。</li>
+                    <li>点击“提交生产任务 (Work)”，将存储证明永久锚定在 <strong>Sepolia</strong> 链上。</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
