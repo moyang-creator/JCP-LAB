@@ -2,32 +2,25 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <script src="./js/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
-    <script src="./js/crypto-js.min.js" type="application/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCP 终端 - 实验室专用版 (v2.0 闭环版)</title>    
+    <title>JCP 技能售卖终端 - 实验室版</title>    
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --error: #e06c75; --light-bg: #f8f9fa; }
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
-        
         .main-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; min-width: 600px; }
         .sidebar { width: 350px; min-width: 350px; background: var(--primary); color: white; padding: 20px; display: flex; flex-direction: column; box-shadow: -2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; }
-        
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .card h3 { margin-top: 0; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1rem; }
-        
         .input-item { margin-bottom: 12px; }
         .input-item label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
         .input-group { display: flex; gap: 8px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; background: var(--light-bg); }
-        
-        .debug-console { background: #1a1c1f; color: #98c379; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; height: 220px; overflow-y: auto; font-size: 12px; border: 1px solid #333; line-height: 1.6; }
-        
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; background: var(--light-bg); box-sizing: border-box; }
+        textarea { height: 80px; resize: none; margin-bottom: 10px; }
+        .debug-console { background: #1a1c1f; color: #98c379; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; height: 180px; overflow-y: auto; font-size: 12px; border: 1px solid #333; line-height: 1.6; }
         button { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; background: var(--accent); color: white; font-weight: bold; transition: 0.2s; }
         button:hover { opacity: 0.9; }
         button:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-browser { background: #6c757d; font-size: 12px; padding: 8px 10px; }
-
         .data-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .study-notes { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px; line-height: 1.7; color: #dcdde1; }
         .study-notes h4 { color: #f1c40f; margin-top: 0; margin-bottom: 10px; border-bottom: 1px dotted #f1c40f; padding-bottom: 5px; }
@@ -37,67 +30,53 @@
 
 <div class="main-panel">
     <div class="card">
-        <h3>🔗 1. 实验室合约部署</h3>
+        <h3>🔗 1. 实验室合约配置</h3>
         <div class="input-item">
-            <label>生产合约地址 (WorkLog)</label>
-            <div class="input-group">
-                <input type="text" id="input-worklog" value="0x6226c48798d6992376ad837f43b674586ed5f2e2">
-                <button class="btn-browser" onclick="openEtherscan('input-worklog')">🔗 查看</button>
-            </div>
+            <label>JCP 代币合约地址</label>
+            <input type="text" id="input-jcptoken" placeholder="0x..." value="">
         </div>
         <div class="input-item">
-            <label>JCP 合约地址 (JCPToken)</label>
-            <div class="input-group">
-                <input type="text" id="input-jcptoken" value="0x45e2330787b318d3c498010e8f2a31d93f8f4ea5">
-                <button class="btn-browser" onclick="openEtherscan('input-jcptoken')">🔗 查看</button>
-            </div>
+            <label>技能市场合约地址 (SkillMarket)</label>
+            <input type="text" id="input-skillmarket" placeholder="0x..." value="">
         </div>
-        <button onclick="connectContracts()" style="width:100%; margin-top:5px;">初始化实验连接</button>
+        <button onclick="connectContracts()" style="width:100%;">初始化实验链路</button>
     </div>
 
     <div class="card">
-        <h3>🛠️ 2. 学生交互区 (闭环版)</h3>
-        <div class="input-item">
-            <label>web3与web2(Arweave存证链接，实验 7 产出)闭环</label>
-            <div class="input-group">
-                <input type="text" id="arweave-link" placeholder="在此粘贴你想永久保存的任意内容，如Arweave 永久链接，例如: https://arweave.net/...">
-            </div>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button id="btn-work" disabled onclick="doWork()" style="flex:1; background:var(--primary)">🏗️ 提交生产任务 (锚定存证)</button>
-            <button id="btn-claim" disabled onclick="claim()" style="flex:1; background:var(--success)">💰 领取 JCP 补贴</button>
-        </div>
-        <p id="user-status" style="color:var(--accent); font-size: 13px; margin-top: 12px; font-weight: bold;">状态：请先点击初始化</p>
+        <h3>🛠️ 2. 知识变现区 (Skill-to-Earn)</h3>
+        <label style="font-size: 13px; color: #666; font-weight: bold;">输入你的技能答案 / 知识产出：</label>
+        <textarea id="answer-text" placeholder="在此输入独特的见解或答案，重复的内容将无法获得奖励..."></textarea>
+        <button id="btn-sell" disabled onclick="sellSkill()" style="width:100%; background:var(--success)">🚀 提交并卖出技能 (获得 20 JCP)</button>
+        <p id="user-status" style="color:var(--accent); font-size: 12px; margin-top: 10px; text-align: center;">状态：等待初始化...</p>
     </div>
 
     <div class="card" style="flex:1; display:flex; flex-direction:column;">
-        <h3>📟 技术诊断终端 (Debug)</h3>
-        <div id="debug-console" class="debug-console">> 准备就绪...</div>
+        <h3>📟 实时终端 (Debug)</h3>
+        <div id="debug-console" class="debug-console">> 系统就绪，请先配置合约地址...</div>
     </div>
 </div>
 
 <div class="sidebar">
-    <h3>📊 宏观经济数据</h3>
+    <h3>📊 实验室宏观仪表盘</h3>
     <div class="data-box">
-        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">全班总产出 (GCP)</div>
-        <div id="val-gcp" style="font-size: 32px; font-weight: bold; color: #2ecc71;">0</div>
+        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">央行储备 / 个人余额</div>
+        <div id="val-balance" style="font-size: 32px; font-weight: bold; color: #3498db;">0</div>
     </div>
     <div class="data-box">
-        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">JCP 总供应量</div>
+        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">JCP 货币总供应量</div>
         <div id="val-supply" style="font-size: 32px; font-weight: bold; color: #f1c40f;">0</div>
     </div>
 
     <div class="study-notes">
-        <h4>📖 实验学习要点</h4>
-        <p><b>1. 永久存储与存证：</b> 实验 7 通过 Arweave 确保存证内容永不丢失，并将其链接锚定在 Sepolia 账本上。</p>
-        <p><b>2. 跨链闭环：</b> 观察数据（Arweave）如何与逻辑（Ethereum）结合，形成完整的 Web3 基础设施视图。</p>
-        <p><b>3. 宏观指标：</b> GCP 指标实时反映了全班通过 Arweave 存储作业所创造的“数据价值”。</p>
-        <p><b>4. 手续费(Gas)：</b> 每次将 Arweave 链接存入 Sepolia 都会产生微小的 Gas 消耗，体验“写数据到链”的成本感。</p>
+        <h4>📖 经济学观察点</h4>
+        <p><b>1. 货币内生性：</b> 观察总供应量如何随学生的“知识产出”而动态增长，而非行政指令。</p>
+        <p><b>2. 产权唯一性：</b> 合约通过 Hash 校验确保同一段知识不能被卖出两次。</p>
+        <p><b>3. 权力移交：</b> 只有当代币合约的所有权转交给市场合约后，此终端才能正常工作。</p>
     </div>
 </div>
 
 <script>
-    let provider, signer, workLogContract, jcpTokenContract;
+    let provider, signer, skillMarketContract, jcpTokenContract;
 
     function debugLog(msg, isError = false) {
         const consoleBox = document.getElementById('debug-console');
@@ -106,100 +85,88 @@
         consoleBox.scrollTop = consoleBox.scrollHeight;
     }
 
-    function openEtherscan(inputId) {
-        const addr = document.getElementById(inputId).value.trim();
-        if (ethers.utils.isAddress(addr)) {
-            window.open(`https://sepolia.etherscan.io/address/${addr}`, '_blank');
-        } else {
-            alert("地址无效，无法跳转");
-        }
-    }
-
-    window.onload = function() {
-        if (typeof ethers === 'undefined') {
-            debugLog("致命错误：ethers.js 加载失败！请检查 CDN 网络连接。", true);
-        } else {
-            debugLog("ethers.js 库加载成功，版本：" + ethers.version);
-        }
-    };
-
     async function connectContracts() {
-        const wAddr = document.getElementById('input-worklog').value.trim();
         const jAddr = document.getElementById('input-jcptoken').value.trim();
+        const sAddr = document.getElementById('input-skillmarket').value.trim();
 
-        if (!ethers.utils.isAddress(wAddr) || !ethers.utils.isAddress(jAddr)) {
-            debugLog("地址格式不正确，请重新检查", true);
+        if (!ethers.utils.isAddress(jAddr) || !ethers.utils.isAddress(sAddr)) {
+            debugLog("地址格式错误，请检查", true);
             return;
         }
 
         if (window.ethereum) {
             try {
-                debugLog("正在申请 MetaMask 连接权限...");
+                debugLog("正在连接钱包...");
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
+                const userAddr = await signer.getAddress();
 
-                // 更新 ABI：如果合约 submitTask 接受链接字符串，则对应修改
-                const workLogABI = ["function submitTask(string data) public", "function totalWork() public view returns (uint256)"];
-                const jcpTokenABI = ["function claimSubsidy() public", "function totalSupply() public view returns (uint256)"];
+                // 核心：适配你最新合约的 ABI
+                const jcpABI = [
+                    "function totalSupply() public view returns (uint256)",
+                    "function balanceOf(address) public view returns (uint256)"
+                ];
+                const skillABI = [
+                    "function sellSkill(string memory answer) public",
+                    "function SKILL_REWARD() public view returns (uint256)"
+                ];
 
-                workLogContract = new ethers.Contract(wAddr, workLogABI, signer);
-                jcpTokenContract = new ethers.Contract(jAddr, jcpTokenABI, signer);
+                jcpTokenContract = new ethers.Contract(jAddr, jcpABI, signer);
+                skillMarketContract = new ethers.Contract(sAddr, skillABI, signer);
 
-                const gcp = await workLogContract.totalWork();
-                debugLog("链路打通！当前全班总产出: " + gcp);
-
-                document.getElementById('btn-work').disabled = false;
-                document.getElementById('btn-claim').disabled = false;
-                document.getElementById('user-status').innerText = "✅ 已连接至区块链实验室 (v2.0)";
+                debugLog("连接成功！地址：" + userAddr.substring(0,6) + "...");
+                document.getElementById('btn-sell').disabled = false;
+                document.getElementById('user-status').innerText = "✅ 已连接 Sepolia 测试网";
                 
                 updateData();
-                setInterval(updateData, 5000);
+                setInterval(updateData, 8000); // 降低频率，节省请求
             } catch (err) {
                 debugLog("连接失败: " + err.message, true);
             }
         } else {
-            debugLog("未检测到钱包插件", true);
+            debugLog("未检测到 MetaMask 插件", true);
         }
     }
 
     async function updateData() {
         try {
-            const gcp = await workLogContract.totalWork();
+            const userAddr = await signer.getAddress();
+            const balance = await jcpTokenContract.balanceOf(userAddr);
             const supply = await jcpTokenContract.totalSupply();
-            document.getElementById('val-gcp').innerText = gcp.toString();
-            document.getElementById('val-supply').innerText = Math.round(ethers.utils.formatEther(supply));
-        } catch (e) { console.error("数据同步错误", e); }
+            
+            document.getElementById('val-balance').innerText = parseFloat(ethers.utils.formatEther(balance)).toFixed(2);
+            document.getElementById('val-supply').innerText = parseFloat(ethers.utils.formatEther(supply)).toFixed(2);
+        } catch (e) { console.error("同步失败", e); }
     }
 
-    // 升级版提交函数：接收输入框中的 Arweave 链接
-    async function doWork() {
-        const arLink = document.getElementById('arweave-link').value.trim();
-        
-        if (!arLink.startsWith("https://arweave.net/")) {
-            debugLog("错误：请先完成实验 7，并填入正确的 Arweave 永久链接！", true);
+    async function sellSkill() {
+        const answer = document.getElementById('answer-text').value.trim();
+        if (!answer) {
+            debugLog("请输入答案后再提交", true);
             return;
         }
 
         try {
-            debugLog("正在将 Arweave 链接提交至 Sepolia 链，请在钱包确认...");
-            const tx = await workLogContract.submitTask(arLink);
-            debugLog("交易已发送，等待链上存证确认...");
+            document.getElementById('btn-sell').disabled = true;
+            debugLog("正在向区块链提交知识存证...");
+            
+            // 调用最新合约的 sellSkill 函数
+            const tx = await skillMarketContract.sellSkill(answer);
+            
+            debugLog("交易已广播，哈希: " + tx.hash.substring(0,10) + "...");
             await tx.wait();
-            debugLog("🎉 存证成功！您的实验报告已通过跨链锚定永久锁定。");
+            
+            debugLog("变现成功！20 JCP 已发放。");
+            document.getElementById('answer-text').value = ""; // 清空
             updateData();
-        } catch (e) { debugLog("提交取消: " + e.message, true); }
-    }
-
-    async function claim() {
-        try {
-            debugLog("正在领取 JCP 补贴，请确认交易...");
-            const tx = await jcpTokenContract.claimSubsidy();
-            debugLog("正在同步账本...");
-            await tx.wait();
-            debugLog("JCP 领取成功！请查看钱包余额变化。");
-            updateData();
-        } catch (e) { debugLog("领取失败: " + e.message, true); }
+        } catch (e) { 
+            // 捕获常见的“答案重复”或“权限不足”报错
+            debugLog("操作回滚: 可能是答案重复或权限未移交", true);
+            console.error(e);
+        } finally {
+            document.getElementById('btn-sell').disabled = false;
+        }
     }
 </script>
 </body>
