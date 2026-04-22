@@ -14,12 +14,12 @@
         .card h3 { margin-top: 0; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 10px; font-size: 1.1rem; }
         .input-item { margin-bottom: 12px; }
         .input-item label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; font-weight: bold; }
-        .input-group { display: flex; gap: 8px; }
         input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 13px; background: var(--light-bg); box-sizing: border-box; }
         textarea { height: 80px; resize: none; margin-bottom: 10px; }
         .debug-console { background: #1a1c1f; color: #98c379; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; height: 180px; overflow-y: auto; font-size: 12px; border: 1px solid #333; line-height: 1.6; }
-        button { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; background: var(--accent); color: white; font-weight: bold; transition: 0.2s; }
-        button:hover { opacity: 0.9; }
+        button { padding: 12px 16px; border: none; border-radius: 4px; cursor: pointer; background: var(--accent); color: white; font-weight: bold; transition: 0.2s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
         button:disabled { background: #ccc; cursor: not-allowed; }
         .data-box { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .study-notes { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 13px; line-height: 1.7; color: #dcdde1; }
@@ -32,34 +32,34 @@
     <div class="card">
         <h3>🔗 1. 实验室合约配置</h3>
         <div class="input-item">
-            <label>JCP 代币合约地址</label>
-            <input type="text" id="input-jcptoken" placeholder="0x1662c37E57F1eA7874fFb60075C55185Be646093" value="">
+            <label>JCP 代币合约地址 (已预设)</label>
+            <input type="text" id="input-jcptoken" value="0x1662c37E57F1eA7874fFb60075C55185Be646093">
         </div>
         <div class="input-item">
-            <label>技能市场合约地址 (SkillMarket)</label>
-            <input type="text" id="input-skillmarket" placeholder="0xCfB361dD2DD1B65B539c9A9bC960a840935cdC18" value="">
+            <label>技能市场合约地址 (已预设)</label>
+            <input type="text" id="input-skillmarket" value="0xCfB361dD2DD1B65B539c9A9bC960a840935cdC18">
         </div>
-        <button onclick="connectContracts()" style="width:100%;">初始化实验链路</button>
+        <button onclick="connectContracts()" style="width:100%;">初始化实验链路 (一键连接)</button>
     </div>
 
     <div class="card">
         <h3>🛠️ 2. 知识变现区 (Skill-to-Earn)</h3>
-        <label style="font-size: 13px; color: #666; font-weight: bold;">输入你的技能答案 / 知识产出：</label>
-        <textarea id="answer-text" placeholder="在此输入独特的见解或答案，重复的内容将无法获得奖励..."></textarea>
+        <label style="font-size: 13px; color: #666; font-weight: bold;">输入你的原创答案：</label>
+        <textarea id="answer-text" placeholder="请输入独特的答案，合约将自动校验唯一性..."></textarea>
         <button id="btn-sell" disabled onclick="sellSkill()" style="width:100%; background:var(--success)">🚀 提交并卖出技能 (获得 20 JCP)</button>
         <p id="user-status" style="color:var(--accent); font-size: 12px; margin-top: 10px; text-align: center;">状态：等待初始化...</p>
     </div>
 
     <div class="card" style="flex:1; display:flex; flex-direction:column;">
         <h3>📟 实时终端 (Debug)</h3>
-        <div id="debug-console" class="debug-console">> 系统就绪，请先配置合约地址...</div>
+        <div id="debug-console" class="debug-console">> 欢迎来到区块链经济实验室...</div>
     </div>
 </div>
 
 <div class="sidebar">
-    <h3>📊 实验室宏观仪表盘</h3>
+    <h3>📊 宏观经济仪表盘</h3>
     <div class="data-box">
-        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">央行储备 / 个人余额</div>
+        <div style="font-size: 12px; color: #bdc3c7; margin-bottom: 5px;">个人 JCP 余额 (Sepolia)</div>
         <div id="val-balance" style="font-size: 32px; font-weight: bold; color: #3498db;">0</div>
     </div>
     <div class="data-box">
@@ -68,10 +68,10 @@
     </div>
 
     <div class="study-notes">
-        <h4>📖 经济学观察点</h4>
-        <p><b>1. 货币内生性：</b> 观察总供应量如何随学生的“知识产出”而动态增长，而非行政指令。</p>
-        <p><b>2. 产权唯一性：</b> 合约通过 Hash 校验确保同一段知识不能被卖出两次。</p>
-        <p><b>3. 权力移交：</b> 只有当代币合约的所有权转交给市场合约后，此终端才能正常工作。</p>
+        <h4>📖 实验提示</h4>
+        <p><b>1. 初始发行：</b> 老师作为“央行”初始持有 1000 JCP。</p>
+        <p><b>2. 动态增发：</b> 每当有正确答案提交，总供应量将增加 20。</p>
+        <p><b>3. 权限观察：</b> 只有完成 Ownership 移交后，技能市场才有权执行 Mint 操作。</p>
     </div>
 </div>
 
@@ -86,46 +86,44 @@
     }
 
     async function connectContracts() {
+        // 使用 .trim() 自动过滤掉可能存在的首尾空格
         const jAddr = document.getElementById('input-jcptoken').value.trim();
         const sAddr = document.getElementById('input-skillmarket').value.trim();
 
         if (!ethers.utils.isAddress(jAddr) || !ethers.utils.isAddress(sAddr)) {
-            debugLog("地址格式错误，请检查", true);
+            debugLog("地址格式不规范，请确保是正确的 0x 地址", true);
             return;
         }
 
         if (window.ethereum) {
             try {
-                debugLog("正在连接钱包...");
+                debugLog("正在连接 MetaMask...");
                 provider = new ethers.providers.Web3Provider(window.ethereum);
                 await provider.send("eth_requestAccounts", []);
                 signer = provider.getSigner();
-                const userAddr = await signer.getAddress();
 
-                // 核心：适配你最新合约的 ABI
                 const jcpABI = [
                     "function totalSupply() public view returns (uint256)",
                     "function balanceOf(address) public view returns (uint256)"
                 ];
                 const skillABI = [
-                    "function sellSkill(string memory answer) public",
-                    "function SKILL_REWARD() public view returns (uint256)"
+                    "function sellSkill(string memory answer) public"
                 ];
 
                 jcpTokenContract = new ethers.Contract(jAddr, jcpABI, signer);
                 skillMarketContract = new ethers.Contract(sAddr, skillABI, signer);
 
-                debugLog("连接成功！地址：" + userAddr.substring(0,6) + "...");
+                debugLog("链路连接成功！");
                 document.getElementById('btn-sell').disabled = false;
-                document.getElementById('user-status').innerText = "✅ 已连接 Sepolia 测试网";
+                document.getElementById('user-status').innerText = "✅ 实验室网络已激活";
                 
                 updateData();
-                setInterval(updateData, 8000); // 降低频率，节省请求
+                setInterval(updateData, 5000); 
             } catch (err) {
                 debugLog("连接失败: " + err.message, true);
             }
         } else {
-            debugLog("未检测到 MetaMask 插件", true);
+            debugLog("检测不到钱包插件，请安装 MetaMask", true);
         }
     }
 
@@ -137,7 +135,7 @@
             
             document.getElementById('val-balance').innerText = parseFloat(ethers.utils.formatEther(balance)).toFixed(2);
             document.getElementById('val-supply').innerText = parseFloat(ethers.utils.formatEther(supply)).toFixed(2);
-        } catch (e) { console.error("同步失败", e); }
+        } catch (e) { console.error("数据拉取失败", e); }
     }
 
     async function sellSkill() {
@@ -149,21 +147,17 @@
 
         try {
             document.getElementById('btn-sell').disabled = true;
-            debugLog("正在向区块链提交知识存证...");
+            debugLog("发起知识变现请求...");
             
-            // 调用最新合约的 sellSkill 函数
             const tx = await skillMarketContract.sellSkill(answer);
-            
-            debugLog("交易已广播，哈希: " + tx.hash.substring(0,10) + "...");
+            debugLog("交易已入块，等待打包...");
             await tx.wait();
             
-            debugLog("变现成功！20 JCP 已发放。");
-            document.getElementById('answer-text').value = ""; // 清空
+            debugLog("变现成功！JCP 财富已到账。");
+            document.getElementById('answer-text').value = ""; 
             updateData();
         } catch (e) { 
-            // 捕获常见的“答案重复”或“权限不足”报错
-            debugLog("操作回滚: 可能是答案重复或权限未移交", true);
-            console.error(e);
+            debugLog("交易失败：可能是答案重复或系统权限问题", true);
         } finally {
             document.getElementById('btn-sell').disabled = false;
         }
