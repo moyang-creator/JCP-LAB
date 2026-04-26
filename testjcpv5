@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JCP 治理看板 DApp</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; }
+        button { background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+        .status { margin-top: 20px; padding: 10px; border-left: 4px solid #4CAF50; background: #e8f5e9; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🗳️ JCP 治理监控端</h2>
+    <p>当前连接状态: <span id="walletStatus">未连接</span></p>
+    <button onclick="connectWallet()">连接钱包</button>
+    
+    <hr>
+    
+    <h3>查询提案状态</h3>
+    <input type="number" id="proposalId" placeholder="输入提案ID (如: 2)">
+    <button onclick="fetchProposal()">查看看板数据</button>
+
+    <div id="result" class="status" style="display:none;">
+        <p><strong>类型:</strong> <span id="typeDesc">-</span></p>
+        <p><strong>状态:</strong> <span id="statusText">-</span></p>
+        <p><strong>剩余区块:</strong> <span id="blocksLeft">-</span></p>
+        <p><strong>详情内容:</strong> <span id="details">-</span></p>
+    </div>
+</div>
+
+<script>
+    // 1. 配置信息（老师请在此处填入您部署的 v5 地址）
+    const contractAddress = "0xE6a049Ae11689a1a9464F044C5aCD8D96375168A"; 
+    // ABI 只需要包含我们想调用的函数即可
+    const abi = [
+        "function checkProposalDashboard(uint256 _id) public view returns (string, string, uint256, uint256, uint256, string)"
+    ];
+
+    let provider, signer, contract;
+
+    // 2. 连接钱包函数
+    async function connectWallet() {
+        if (window.ethereum) {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            document.getElementById('walletStatus').innerText = "已连接: " + await signer.getAddress();
+        } else {
+            alert("请先安装 MetaMask 钱包！");
+        }
+    }
+
+    // 3. 调用合约读取数据
+    async function fetchProposal() {
+        const id = document.getElementById('proposalId').value;
+        if (!id) return alert("请输入ID");
+
+        // 初始化合约对象
+        contract = new ethers.Contract(contractAddress, abi, provider);
+
+        try {
+            // 对应合约中的返回：typeDesc, status, for, against, blocks, details
+            const data = await contract.checkProposalDashboard(id);
+            
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('typeDesc').innerText = data[0];
+            document.getElementById('statusText').innerText = data[1];
+            document.getElementById('blocksLeft').innerText = data[4].toString();
+            document.getElementById('details').innerText = data[5] || "(无描述)";
+        } catch (err) {
+            console.error(err);
+            alert("查询失败，请检查合约地址或ID是否正确");
+        }
+    }
+</script>
+</body>
+</html>
