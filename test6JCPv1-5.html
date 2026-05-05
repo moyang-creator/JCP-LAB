@@ -1,3 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JCP 经济系统全域观测站 V3.2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; --dao-blue: #3498db; --success: #2ecc71; --danger: #e74c3c; }
+        body { font-family: 'PingFang SC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
+        
+        /* 侧边栏 */
+        .sidebar { width: 320px; background: var(--sidebar-bg); color: white; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid #333; }
+        .sidebar h2 { font-size: 1.1rem; margin-bottom: 15px; color: var(--dao-blue); border-left: 4px solid var(--dao-blue); padding-left: 10px; }
+        .sidebar-section { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-section h4 { color: #88929b; font-size: 0.75rem; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+        .val { color: var(--success); font-family: 'Courier New', monospace; font-weight: bold; }
+        .config-label { font-size: 9px; color: #88929b; margin-top: 5px; display: block; }
+        .config-input { width: 100%; background: #2c3e50; border: 1px solid #3e4e5e; color: #fff; padding: 5px; font-size: 9px; border-radius: 3px; margin-bottom: 4px; box-sizing: border-box; }
+        
+        /* 主内容 */
+        .main-panel { flex: 1; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto 1fr; gap: 15px; overflow-y: auto; }
+        .card { background: var(--card-bg); padding: 18px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 12px 0; font-size: 1rem; border-bottom: 1px solid #eee; padding-bottom: 8px; display: flex; justify-content: space-between; }
+        .desc { font-size: 0.75rem; color: #7f8c8d; margin-bottom: 12px; line-height: 1.4; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .input-group label { font-size: 0.8rem; width: 90px; color: #34495e; }
+        input, textarea, select { flex: 1; border: 1px solid #dcdfe6; border-radius: 5px; padding: 8px; font-size: 0.9rem; }
+        .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: 0.2s; }
+        .btn-blue { background: var(--dao-blue); color: white; }
+        .btn-green { background: var(--success); color: white; }
+        .btn-ghost { background: #95a5a6; color: white; }
+        .lock-tag { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; background: #eee; color: #999; }
+        .lock-active { background: var(--danger); color: white; }
+        .dao-panel { grid-column: span 2; border-top: 5px solid var(--dao-blue); }
+        #debug-console { grid-column: span 2; background: #1e252b; color: #abb2bf; padding: 12px; border-radius: 8px; font-family: monospace; font-size: 11px; height: 120px; overflow-y: auto; border-left: 5px solid var(--dao-blue); }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📊 经济系统观测站</h2>
+    
+    <div class="sidebar-section">
+        <h4>💰 个人账户</h4>
+        <div class="data-row"><span>我的 JCP:</span> <span id="val-balance" class="val">0.00</span></div>
+        <div class="data-row"><span>我的 USD:</span> <span id="val-usd-balance" class="val">0.00</span></div>
+    </div>
+
+    <div class="sidebar-section">
+        <h4>🏛️ 宏观/政策状态</h4>
+        <div class="data-row"><span>劳动税率:</span> <span id="stat-labor" class="val">--</span></div>
+        <div class="data-row"><span>资本税率:</span> <span id="stat-capital" class="val">--</span></div>
+        <div class="data-row"><span>JCP 总供应:</span> <span id="sys-jcp-total" class="val">0</span></div>
+    </div>
+
+    <div class="sidebar-section">
+        <h4>⚖️ DEX 流动性池 (实时)</h4>
+        <div class="data-row"><span>池内 JCP:</span> <span id="dex-jcp" class="val">0</span></div>
+        <div class="data-row"><span>池内 USD:</span> <span id="dex-usd" class="val">0</span></div>
+        <div class="data-row" style="border-top:1px solid #444; margin-top:5px; padding-top:5px;">
+            <span>现货汇率:</span> <span id="dex-price" style="color:#f1c40f;">0.00 USD/JCP</span>
+        </div>
+    </div>
+
+    <div class="sidebar-section">
+        <h4>⚙️ 核心合约配置 (6)</h4>
+        <label class="config-label">1. JCP 代币合约:</label>
+        <input type="text" id="conf-jcp" class="config-input" value="0xb1b96f98cF89e7621dCc36e06E09457DAF28E8CB">
+        
+        <label class="config-label">2. USD 代币合约:</label>
+        <input type="text" id="conf-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
+        
+        <label class="config-label">3. DEX 交易合约:</label>
+        <input type="text" id="conf-exchange" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
+        
+        <label class="config-label">4. DAO 治理合约[cite: 2]:</label>
+        <input type="text" id="conf-dao" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
+
+        <label class="config-label">5. 技能市场/国库[cite: 3]:</label>
+        <input type="text" id="conf-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
+
+        <label class="config-label">6. JCPTreasury 合约[cite: 3]:</label>
+        <input type="text" id="conf-treasury" class="config-input" value="0xA10794996E67382847082932C57cd00103e5dAA4">
+        
+        <button onclick="connectWallet()" class="btn btn-blue" style="width:100%; margin-top:10px;">🔄 启动连接与初始化</button>
+    </div>
+</div>
+
+<div class="main-panel">
+    <!-- 原有功能卡片布局保持不变 -->
+    <div class="card">
+        <h3>🛠️ 技能售卖终端</h3>
+        <p class="desc">提交见解获取 JCP，系统自动扣除劳动税[cite: 3]。</p>
+        <textarea id="answer-text" rows="2" placeholder="输入成果描述..."></textarea>
+        <button onclick="sellSkill()" class="btn btn-blue" style="width:100%; margin-top:8px;">确认提交</button>
+    </div>
+
+    <div class="card">
+        <h3>🏛️ 宏观参数控制台 <span id="lock-status" class="lock-tag">手动管理</span></h3>
+        <p class="desc">直接修改税率 BP。若授权 DAO，此处将锁定[cite: 2, 3]。</p>
+        <div class="input-group">
+            <label>劳动税(BP)</label>
+            <input type="number" id="p-labor" placeholder="2000=20%">
+            <button onclick="updatePolicy('labor')" class="btn btn-ghost policy-btn">更新</button>
+        </div>
+        <div class="input-group">
+            <label>资本税(BP)</label>
+            <input type="number" id="p-capital" placeholder="500=5%">
+            <button onclick="updatePolicy('capital')" class="btn btn-ghost policy-btn">更新</button>
+        </div>
+    </div>
+
+    <!-- 资产交易 -->
+    <div class="card">
+        <h3>⚖️ 资产交易 (Swap)</h3>
+        <div class="input-group">
+            <input type="number" id="swap-amount" placeholder="数量">
+            <select id="swap-direction">
+                <option value="JCPtoUSD">JCP ➡️ USD</option>
+                <option value="USDtoJCP">USD ➡️ JCP</option>
+            </select>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <button onclick="approveDEX('jcp')" class="btn btn-ghost">授权 JCP</button>
+            <button onclick="approveDEX('usd')" class="btn btn-ghost">授权 USD</button>
+            <button onclick="executeSwap()" class="btn btn-green" style="grid-column: span 2;">立即兑换</button>
+        </div>
+    </div>
+
+    <!-- 流动性 -->
+    <div class="card">
+        <h3>🌊 流动性池管理</h3>
+        <div class="input-group">
+            <input type="number" id="lp-jcp" placeholder="JCP">
+            <input type="number" id="lp-usd" placeholder="USD">
+        </div>
+        <button onclick="manageLP('add')" class="btn btn-green" style="width:100%">注入流动性</button>
+    </div>
+
+    <!-- DAO 治理面板 -->
+    <div class="card dao-panel">
+        <h3>🗳️ DAO 链上治理中心</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div>
+                <h4>📜 发起新提案</h4>
+                <div class="input-group"><label>类型</label>
+                    <select id="prop-type">
+                        <option value="1">1: 修改劳动税率[cite: 2]</option>
+                        <option value="2">2: 修改资本税率[cite: 2]</option>
+                        <option value="4">4: 发放财政补贴[cite: 2]</option>
+                    </select>
+                </div>
+                <div class="input-group"><label>数值</label><input type="number" id="prop-val"></div>
+                <div class="input-group"><label>地址</label><input type="text" id="prop-addr"></div>
+                <textarea id="prop-desc" rows="2" placeholder="理由..."></textarea>
+                <button onclick="createProposal()" class="btn btn-blue" style="width:100%; margin-top:5px;">提交提案</button>
+                <button onclick="delegateSelf()" class="btn btn-ghost" style="width:100%; margin-top:5px; font-size:10px;">激活选票 (Delegate)[cite: 3]</button>
+            </div>
+            <div>
+                <h4>📊 看板 & 投票</h4>
+                <div class="input-group"><input type="number" id="query-id" placeholder="ID"><button onclick="refreshProposal()" class="btn btn-ghost">查询</button></div>
+                <div id="proposal-board" style="border: 1px solid #eee; padding: 10px; border-radius: 8px; min-height: 100px; font-size: 0.8rem; background: #fafafa;">等待查询...</div>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <button onclick="castVote(true)" class="btn btn-green" style="flex:1">赞成</button>
+                    <button onclick="castVote(false)" class="btn btn-red" style="flex:1">反对</button>
+                    <button onclick="executeProposal()" class="btn btn-blue" style="flex:1">执行</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="debug-console">> 初始化准备就绪。</div>
+</div>
+
 <script>
     // --- 1. 核心 ABI 配置 ---
     const JCP_ABI = [
@@ -263,3 +438,5 @@
         } catch (e) { log(e, true); }
     }
 </script>
+</body>
+</html>
