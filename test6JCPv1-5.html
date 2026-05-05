@@ -84,82 +84,129 @@
 
 <script>
     let provider, signer, userAddress;
-    const commonABI = ["function balanceOf(address) view returns (uint256)", "function totalSupply() view returns (uint256)", "function approve(address, uint256) returns (bool)", "function delegate(address) external"];
+    // 预设合约实例存储
+    const contracts = {};
+    const commonABI = [
+        "function balanceOf(address) view returns (uint256)", 
+        "function totalSupply() view returns (uint256)", 
+        "function approve(address, uint256) returns (bool)", 
+        "function delegate(address) external"
+    ];
 
     function debugLog(msg, isError = false) {
         const el = document.getElementById('debug-console');
-        el.innerHTML += `<div style="color:${isError ? '#e06c75' : '#abb2bf'}">> ${msg}</div>`;
+        const now = new Date().toLocaleTimeString();
+        el.innerHTML += `<div style="color:${isError ? '#e06c75' : '#abb2bf'}">[${now}] > ${msg}</div>`;
         el.scrollTop = el.scrollHeight;
     }
 
     async function connectWallet() {
-        if (!window.ethereum) return debugLog("❌ 未检测到钱包", true);
+        // 优化探测逻辑：不再死锁 isMetaMask 标志
+        let ethereum = window.ethereum;
+
+        if (!ethereum) {
+            debugLog("❌ 未检测到钱包插件，请安装 MetaMask", true);
+            return;
+        }
+
+        // 处理多钱包冲突：如果存在 providers 数组，尝试挑出 MetaMask
+        if (ethereum.providers && ethereum.providers.length) {
+            ethereum = ethereum.providers.find(p => p.isMetaMask) || ethereum.providers[0];
+        }
+
         try {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
+            provider = new ethers.providers.Web3Provider(ethereum);
+            debugLog("📡 正在请求钱包授权...");
+            
             await provider.send("eth_requestAccounts", []);
             signer = provider.getSigner();
             userAddress = await signer.getAddress();
-            debugLog(`✅ 已连接: ${userAddress.substring(0,10)}...`);
+            
+            debugLog(`✅ 已连接: ${userAddress.substring(0, 10)}...`);
+            
+            // 初始化 JCP 合约对象用于后续刷新
+            const jcpAddr = document.getElementById('conf-jcp').value;
+            contracts.jcp = new ethers.Contract(jcpAddr, commonABI, signer);
+
             await updateUI();
-        } catch (e) { debugLog("⚠️ 同步失败，请检查网络/地址", true); }
+        } catch (e) {
+            console.error(e);
+            debugLog("⚠️ 连接失败或同步超时，请检查合约地址与当前网络是否匹配", true);
+        }
     }
 
     async function updateUI() {
-        if (!signer) return;
-        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
-        const bal = await jcp.balanceOf(userAddress);
-        const supply = await jcp.totalSupply();
-        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
-        document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
-        debugLog("🔄 数据已刷新");
+        if (!signer || !contracts.jcp) return;
+        try {
+            const bal = await contracts.jcp.balanceOf(userAddress);
+            const supply = await contracts.jcp.totalSupply();
+            
+            // 严格对应 image_1158d7.png 中的数值位置
+            document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
+            
+            debugLog("🔄 链上仪表盘数据已同步");
+        } catch (e) {
+            debugLog("❌ 数据读取失败：请确认地址配置正确且钱包在正确的链上", true);
+        }
     }
+
+    // --- 功能模块 ---
 
     // 1. 技能售卖
     async function sellSkill() {
         if (!signer) return debugLog("请先连接钱包", true);
-        const market = new ethers.Contract(document.getElementById('conf-market').value, ["function sellSkill(string) external"], signer);
+        const marketAddr = document.getElementById('conf-market').value;
+        const market = new ethers.Contract(marketAddr, ["function sellSkill(string) external"], signer);
         try {
-            const tx = await market.sellSkill(document.getElementById('answer-text').value);
-            debugLog("🚀 提交中...");
+            const text = document.getElementById('answer-text').value;
+            const tx = await market.sellSkill(text || "Academic Insight Submission");
+            debugLog("🚀 交易已发出，等待链上确认...");
             await tx.wait();
-            debugLog("✅ 铸造成功！已扣除劳动税");
+            debugLog("✅ 铸造成功！20 JCP 已发放（劳动税已自动注入国库）[cite: 1]");
             updateUI();
-        } catch (e) { debugLog("❌ 提交失败", true); }
+        } catch (e) { debugLog("❌ 提交失败，请检查合约权限", true); }
     }
 
-    // 2. DeFi 兑换功能
+    // 2. DeFi 兑换
     async function approveDEX() {
-        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
-        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value || "100");
-        const tx = await jcp.approve(document.getElementById('conf-exchange').value, amount);
-        debugLog("⏳ 正在授权 DEX...");
-        await tx.wait();
-        debugLog("✅ 授权成功");
-        document.getElementById('btn-swap').disabled = false;
-        document.getElementById('btn-swap').style.background = "#3498db";
+        if (!signer) return;
+        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value || "10");
+        const exchAddr = document.getElementById('conf-exchange').value;
+        try {
+            const tx = await contracts.jcp.approve(exchAddr, amount);
+            debugLog("⏳ 正在授权交易所...");
+            await tx.wait();
+            debugLog("✅ 授权完成，现在可以执行兑换");
+            document.getElementById('btn-swap').disabled = false;
+            document.getElementById('btn-swap').style.background = "#3498db";
+        } catch (e) { debugLog("❌ 授权异常", true); }
     }
 
     async function swapJCP() {
-        const dex = new ethers.Contract(document.getElementById('conf-exchange').value, ["function swap(uint256) external"], signer);
-        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
-        const tx = await dex.swap(amount);
-        debugLog("🔄 兑换中...");
-        await tx.wait();
-        debugLog("✅ 兑换完成！");
-        updateUI();
+        const exchAddr = document.getElementById('conf-exchange').value;
+        const dex = new ethers.Contract(exchAddr, ["function swap(uint256) external"], signer);
+        try {
+            const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+            const tx = await dex.swap(amount);
+            debugLog("🔄 跨期资产交换中...");
+            await tx.wait();
+            debugLog("✅ 兑换成功！[cite: 1]");
+            updateUI();
+        } catch (e) { debugLog("❌ 兑换失败", true); }
     }
 
-    // 3. DAO 功能
+    // 3. DAO 激活
     async function activateDAO() {
-        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
+        if (!contracts.jcp) return;
         try {
-            const tx = await jcp.delegate(userAddress);
-            debugLog("🏛️ 正在激活选票...");
+            const tx = await contracts.jcp.delegate(userAddress);
+            debugLog("🏛️ 正在激活治理选票...");
             await tx.wait();
             document.getElementById('dao-status').innerText = "已激活";
-            document.getElementById('dao-status').style.color = "green";
-            debugLog("✅ 选票已委托给自身，DAO 权限开启");
-        } catch (e) { debugLog("❌ 激活失败", true); }
+            document.getElementById('dao-status').style.color = "#2ecc71";
+            debugLog("✅ 选票已委托，DAO 权限开启[cite: 1]");
+        } catch (e) { debugLog("❌ 激活失败：地址可能不支持 delegate 功能", true); }
     }
 </script>
 </body>
