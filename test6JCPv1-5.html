@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>JCP 宏观经济仪表盘 V2.3</title>
+    <title>JCP 宏观经济仪表盘 V2.2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
-        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; --warning-red: #e74c3c; }
+        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; }
         body { font-family: 'PingFang SC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
         .sidebar { width: 280px; background: var(--sidebar-bg); color: white; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
         .sidebar h2 { font-size: 1.1rem; margin-bottom: 15px; color: #3498db; }
@@ -14,8 +14,6 @@
         .data-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.85rem; }
         .val { color: #2ecc71; font-family: monospace; }
         .config-hint { font-size: 0.65rem; color: #f1c40f; margin-bottom: 5px; line-height: 1.2; border-left: 2px solid #f1c40f; padding-left: 5px; }
-        /* 新增授权提示样式 */
-        .auth-warning { font-size: 0.75rem; color: var(--warning-red); background: rgba(231, 76, 60, 0.1); padding: 8px; border-radius: 4px; border: 1px solid var(--warning-red); margin-bottom: 10px; font-weight: bold; }
         .config-input { width: 100%; background: #2c3e50; border: 1px solid #3e4e5e; color: #fff; padding: 4px; font-size: 9px; border-radius: 3px; margin-bottom: 4px; box-sizing: border-box; }
         .main-panel { flex: 1; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 15px; overflow-y: auto; }
         .card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -74,15 +72,14 @@
 <div class="main-panel">
     <div class="card">
         <h3>🛠️ 技能售卖终端</h3>
-        <p class="desc">提交见解获取 JCP[cite: 1]。</p>
+        <p class="desc">提交见解获取 JCP。</p>
         <textarea id="answer-text" rows="2" placeholder="输入您的研究成果..."></textarea>
         <button onclick="sellSkill()" class="btn btn-blue" style="width:100%; margin-top:8px;">确认提交</button>
     </div>
 
     <div class="card">
         <h3>⚖️ 资产交易 (Swap)</h3>
-        <div class="auth-warning">⚠️ 务必先在下方分别点一下 “授权 JCP” 和 “授权 USD”，否则兑换将失败！</div>
-        <p class="desc">适配 JCPExchangeV3 兑换逻辑[cite: 1]。</p>
+        <p class="desc">适配 JCPExchangeV3 兑换逻辑。</p>
         <div class="input-group">
             <input type="number" id="swap-amount" placeholder="输入数量">
             <select id="swap-direction">
@@ -99,8 +96,7 @@
 
     <div class="card">
         <h3>🌊 流动性池管理</h3>
-        <div class="auth-warning">⚠️ 操作前请确认已在“资产交易”卡片完成代币授权！</div>
-        <p class="desc">基于 $x \times y = k$ 注入或提取[cite: 1]。</p>
+        <p class="desc">基于 $x \times y = k$ 注入或提取。</p>
         <div class="input-group">
             <input type="number" id="lp-jcp" placeholder="JCP 数量">
             <input type="number" id="lp-usd" placeholder="USD 数量">
@@ -124,6 +120,7 @@
 <script>
     let provider, signer, userAddr;
     const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function totalSupply() view returns (uint256)", "function approve(address, uint256) returns (bool)", "function delegate(address) external"];
+    // 关键修正：ABI 必须与 JCPDEFI.sol 完全一致
     const DEX_ABI = [
         "function swapJCPForJCPUSD(uint256) external",
         "function swapJCPUSDForJCP(uint256) external",
@@ -175,6 +172,7 @@
             document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
             document.getElementById('val-treasury-jcp').innerText = ethers.utils.formatEther(tBal);
             
+            // 更新池子储备和价格
             document.getElementById('pool-jcp').innerText = ethers.utils.formatEther(stats[0]);
             document.getElementById('pool-usd').innerText = ethers.utils.formatEther(stats[1]);
             document.getElementById('val-price').innerText = ethers.utils.formatUnits(stats[3], 18);
@@ -209,7 +207,7 @@
             await tx.wait();
             debugLog("✅ 资产交换成功[cite: 1]");
             updateUI();
-        } catch (e) { debugLog("❌ 兑换失败: " + (e.reason || "请检查授权"), true); }
+        } catch (e) { debugLog("❌ 兑换失败: " + (e.reason || "逻辑异常"), true); }
     }
 
     async function manageLP(mode) {
@@ -219,17 +217,20 @@
                 const jcpIn = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
                 const usdIn = ethers.utils.parseEther(document.getElementById('lp-usd').value);
                 debugLog("🌊 注入流动性中...");
+                // 必须严格对应合约 addLiquidity(jcp, jcpusd)
                 const tx = await dex.addLiquidity(jcpIn, usdIn);
                 await tx.wait();
                 debugLog("✅ 流动性已成功注入[cite: 1]");
             } else {
+                // 演示版默认提取 10% 或固定份额，合约需要传入 lpAmount
                 const tx = await dex.removeLiquidity(ethers.utils.parseEther("1"));
                 await tx.wait();
                 debugLog("✅ 已收回流动性资产");
             }
             updateUI();
         } catch (e) { 
-            debugLog("❌ 操作失败: " + (e.reason || "请确认已完成授权操作"), true); 
+            console.error(e);
+            debugLog("❌ 操作失败: " + (e.reason || "请检查授权或池子比例"), true); 
         }
     }
 
