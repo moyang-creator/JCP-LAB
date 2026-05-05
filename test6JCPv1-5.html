@@ -136,20 +136,43 @@
     }
 
     async function updateUI() {
-        if (!signer || !contracts.jcp) return;
-        try {
-            const bal = await contracts.jcp.balanceOf(userAddress);
-            const supply = await contracts.jcp.totalSupply();
-            
-            // 严格对应 image_1158d7.png 中的数值位置
-            document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
-            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
-            
-            debugLog("🔄 链上仪表盘数据已同步");
-        } catch (e) {
-            debugLog("❌ 数据读取失败：请确认地址配置正确且钱包在正确的链上", true);
+    if (!signer || !userAddress) return;
+    
+    // 从输入框动态获取地址
+    const jcpAddr = document.getElementById('conf-jcp').value;
+    const treasuryAddr = document.getElementById('conf-treasury').value;
+
+    try {
+        // 验证地址格式
+        if (!ethers.utils.isAddress(jcpAddr)) {
+            debugLog("❌ JCP 合约地址格式非法", true);
+            return;
         }
+
+        const jcpContract = new ethers.Contract(jcpAddr, commonABI, signer);
+        
+        // 并发读取数据，提高响应速度
+        const [bal, supply] = await Promise.all([
+            jcpContract.balanceOf(userAddress),
+            jcpContract.totalSupply()
+        ]);
+
+        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+        document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
+        
+        // 如果国库地址存在，尝试读取国库余额
+        if (ethers.utils.isAddress(treasuryAddr)) {
+            const tBal = await jcpContract.balanceOf(treasuryAddr);
+            document.getElementById('val-treasury-bal').innerText = ethers.utils.formatEther(tBal);
+        }
+
+        debugLog("🔄 链上仪表盘数据已同步");
+    } catch (e) {
+        console.error("Detailed Error:", e);
+        // 如果是因为方法不存在（ABI不匹配）或网络不对，会触发这里
+        debugLog("❌ 同步超时：请确认 MetaMask 网络已切换至合约所在链", true);
     }
+}
 
     // --- 功能模块 ---
 
