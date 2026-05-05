@@ -169,7 +169,7 @@
         debugLog(`✅ 已连接 MetaMask: ${addr}`);
         
         // 更新 UI 数据
-        updateStats(addr);
+        updateUI(addr);
     } catch (e) {
         debugLog(`❌ 连接失败: ${e.message}`, true);
     }
@@ -210,7 +210,7 @@
             debugLog("✅ 提交成功！系统已为您铸造 20 JCP（已自动扣除劳动税并注入国库）");
 
             // 7. 刷新余额显示
-            await updateUI()
+            await updateUI(addr);
 
         } catch (error) {
             console.error(error);
