@@ -310,13 +310,12 @@
     // v1: 技能售卖
     async function sellSkill() {
         try {
-            const market = new ethers.Contract(getAddrs().market, MARKET_ABI, signer);
-            const tx = await market.sellSkill(document.getElementById('answer-text').value);
-            log("提交成果中...");
+            const market = new ethers.Contract(document.getElementById('conf-market').value, ["function sellSkill(string) external"], signer);
+            const tx = await market.sellSkill(document.getElementById('answer-text').value || "Research");
             await tx.wait();
-            log("成果已确认，奖励已发放");
+            debugLog("✅ 技能产出已发放[cite: 1]");
             updateUI();
-        } catch (e) { log(e, true); }
+        } catch (e) { debugLog("❌ 技能提交失败", true); }
     }
 
     // v2: 政策调整
@@ -333,48 +332,56 @@
     }
 
     // v3: 资产交易 (Swap)
-    async function approveDEX(tokenType) {
+    async function approveDEX(type) {
         try {
-            const addrs = getAddrs();
-            const tokenAddr = tokenType === 'jcp' ? addrs.jcp : addrs.usd;
-            const contract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-            log(`授权 ${tokenType.toUpperCase()} 中...`);
-            const tx = await contract.approve(addrs.dex, ethers.constants.MaxUint256);
+            const addr = document.getElementById(type === 'jcp' ? 'conf-jcp' : 'conf-usd').value;
+            const dexAddr = document.getElementById('conf-exchange').value;
+            const token = new ethers.Contract(addr, ERC20_ABI, signer);
+            const tx = await token.approve(dexAddr, ethers.utils.parseEther("1000000"));
+            debugLog(`⏳ 正在授权 ${type.toUpperCase()}...`);
             await tx.wait();
-            log(`授权成功`);
-        } catch (e) { log(e, true); }
+            debugLog(`✅ ${type.toUpperCase()} 授权完成`);
+        } catch (e) { debugLog("❌ 授权失败", true); }
     }
 
     async function executeSwap() {
         try {
-            const addrs = getAddrs();
-            const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
+            const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
             const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
             const dir = document.getElementById('swap-direction').value;
-            const path = dir === "JCPtoUSD" ? [addrs.jcp, addrs.usd] : [addrs.usd, addrs.jcp];
-            log("正在执行兑换...");
-            const tx = await dex.swapExactTokensForTokens(amount, 0, path, userAddr, 9999999999);
+            
+            debugLog("📡 正在提交兑换请求...");
+            const tx = (dir === 'JCPtoUSD') ? 
+                await dex.swapJCPForJCPUSD(amount) : 
+                await dex.swapJCPUSDForJCP(amount);
+            
             await tx.wait();
-            log("兑换成功");
+            debugLog("✅ 资产交换成功[cite: 1]");
             updateUI();
-        } catch (e) { log(e, true); }
+        } catch (e) { debugLog("❌ 兑换失败: " + (e.reason || "请检查授权"), true); }
     }
 
-    // v4: 流动性注入
-    async function manageLP() {
+    async function manageLP(mode) {
         try {
-            const addrs = getAddrs();
-            const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
-            const valJCP = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
-            const valUSD = ethers.utils.parseEther(document.getElementById('lp-usd').value);
-            log("正在注入流动性...");
-            const tx = await dex.addLiquidity(valJCP, valUSD, 0, 0, userAddr, 9999999999);
-            await tx.wait();
-            log("流动性注入成功");
+            const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
+            if (mode === 'add') {
+                const jcpIn = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
+                const usdIn = ethers.utils.parseEther(document.getElementById('lp-usd').value);
+                debugLog("🌊 注入流动性中...");
+                const tx = await dex.addLiquidity(jcpIn, usdIn);
+                await tx.wait();
+                debugLog("✅ 流动性已成功注入[cite: 1]");
+            } else {
+                const tx = await dex.removeLiquidity(ethers.utils.parseEther("1"));
+                await tx.wait();
+                debugLog("✅ 已收回流动性资产");
+            }
             updateUI();
-        } catch (e) { log(e, true); }
+        } catch (e) { 
+            debugLog("❌ 操作失败: " + (e.reason || "请确认已完成授权操作"), true); 
+        }
     }
-
+    
     // v5: DAO 治理
     async function delegateSelf() {
         try {
