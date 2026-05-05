@@ -210,7 +210,7 @@
             debugLog("✅ 提交成功！系统已为您铸造 20 JCP（已自动扣除劳动税并注入国库）");
 
             // 7. 刷新余额显示
-            await updateStats(); 
+            await updateUI()
 
         } catch (error) {
             console.error(error);
