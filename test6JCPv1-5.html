@@ -2,245 +2,164 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCP 宏观经济仪表盘</title>
-    <script src="./js/ethers.umd.min.js" type="application/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
-        :root {
-            --sidebar-bg: #1e252b; --main-bg: #f0f2f5; --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            --accent-blue: #3498db; --accent-yellow: #f1c40f; --text-gray: #95a5a6;
-        }
-
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
-
-        /* 侧边栏样式 */
-        .sidebar { width: 280px; background: var(--sidebar-bg); color: white; padding: 20px; display: flex; flex-direction: column; }
-        .sidebar h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
-        .sidebar-section { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .sidebar-section h4 { color: var(--text-gray); font-size: 0.75rem; margin: 0 0 10px 0; font-weight: normal; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
-        
-        /* 地址配置区域 - 扩展至 6 个 */
-        .config-label { font-size: 0.7rem; color: #7f8c8d; display: block; margin-top: 6px; }
-        .config-input { width: 100%; background: #2c3e50; border: 1px solid #34495e; color: #bdc3c7; padding: 5px; font-size: 10px; border-radius: 4px; margin-bottom: 4px; box-sizing: border-box; }
-        .btn-connect { background: #3498db; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 0.85rem; margin-top: 10px; }
-
-        /* 主面板布局 */
-        .main-content { flex: 1; display: flex; flex-direction: column; padding: 25px; overflow-y: auto; gap: 20px; }
-        .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: var(--card-shadow); position: relative; }
-        .card h3 { margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
-        .card p.desc { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 15px; }
-        
-        /* 交互组件 */
-        textarea, input[type="number"], input[type="text"] { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-blue { background: #3498db; color: white; }
-        .btn-yellow { background: var(--accent-yellow); color: #2c3e50; }
-        .btn-gray { background: #95a5a6; color: white; }
-
-        /* 底部调试栏 */
-        #debug-console { background: #1e252b; color: #abb2bf; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px; height: 180px; overflow-y: auto; border: 1px solid #34495e; }
+        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; }
+        body { font-family: 'PingFang SC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; padding: 20px; display: flex; flex-direction: column; }
+        .sidebar h2 { font-size: 1.1rem; margin-bottom: 20px; }
+        .sidebar-section { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; margin-bottom: 12px; }
+        .sidebar-section h4 { color: #88929b; font-size: 0.75rem; margin: 0 0 10px 0; font-weight: normal; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
+        .config-group { flex: 1; overflow-y: auto; }
+        .config-label { font-size: 0.7rem; color: #88929b; display: block; margin-top: 5px; }
+        .config-input { width: 100%; background: #2c3e50; border: 1px solid #3e4e5e; color: #fff; padding: 4px 6px; font-size: 10px; border-radius: 3px; margin-bottom: 2px; box-sizing: border-box; }
+        .main-panel { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0 0 12px 0; font-size: 1rem; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .desc { font-size: 0.8rem; color: #7f8c8d; margin-bottom: 12px; }
+        textarea, input { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 8px; box-sizing: border-box; }
+        .btn-primary { background: #3498db; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        #debug-console { background: #1e252b; color: #abb2bf; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; height: 140px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <h2>📊 宏观经济仪表盘</h2>
-    
     <div class="sidebar-section">
         <h4>个人与总量</h4>
         <div class="data-row"><span>我的余额:</span> <span id="val-balance">0.00</span> <span>JCP</span></div>
-        <div class="data-row"><span>货币总量:</span> <span id="val-supply" style="font-weight: bold;">0</span></div>
+        <div class="data-row"><span>货币总量:</span> <span id="val-supply">0</span></div>
     </div>
-
     <div class="sidebar-section">
         <h4>政策指数</h4>
-        <div class="data-row"><span>国库储备:</span> <span>0</span></div>
-        <div class="data-row"><span>劳动/资本税:</span> <span>0 % / 0 %</span></div>
+        <div class="data-row"><span>国库储备:</span> <span id="val-treasury-bal">0</span></div>
+        <div class="data-row"><span>劳动/资本税:</span> <span>5 % / 2 %</span></div>
     </div>
-
-    <div class="sidebar-section">
-        <h4>市场汇率</h4>
-        <div class="data-row"><span>1 JCP =</span> <span>0.00</span> <span>POW</span></div>
-    </div>
-
-    <div class="sidebar-section" style="flex:1; overflow-y:auto;">
-        <h4 style="display:flex; align-items:center; gap:5px;">⚙️ 实验地址配置</h4>
-        <span class="config-label">JCP 代币:</span>
-        <input type="text" id="conf-jcp" class="config-input" value="0xd5A06875A71c3ee05f76E7b4AA612215F171B5D6">
-        
-        <span class="config-label">JCP USD 代币:</span>
-        <input type="text" id="conf-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
-
-        <span class="config-label">技能市场 (V2):</span>
-        <input type="text" id="conf-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
-
-        <span class="config-label">JCP 国库:</span>
-        <input type="text" id="conf-treasury" class="config-input" value="0xA10794996E67382847082932C57cd00103e5dAA4">
-
-        <span class="config-label">治理中心 (DAO):</span>
-        <input type="text" id="conf-governor" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
-
-        <span class="config-label">DEX 交易所 (V4):</span>
-        <input type="text" id="conf-exchange" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
-        
-        <button onclick="connectWallet()" class="btn-connect">🌐 连接/刷新</button>
+    <div class="config-group">
+        <h4>⚙️ 实验地址配置</h4>
+        <span class="config-label">JCP 代币:</span> <input type="text" id="conf-jcp" class="config-input" value="0xd5A06875A71c3ee05f76E7b4AA612215F171B5D6">
+        <span class="config-label">技能市场 (V2):</span> <input type="text" id="conf-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
+        <span class="config-label">DEX 交易所 (V4):</span> <input type="text" id="conf-exchange" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
+        <span class="config-label">治理中心 (DAO):</span> <input type="text" id="conf-governor" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
+        <span class="config-label">JCP 国库:</span> <input type="text" id="conf-treasury" class="config-input" value="0xA10794996E67382847082932C57cd00103e5dAA4">
+        <span class="config-label">USD 代币:</span> <input type="text" id="conf-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
+        <button onclick="connectWallet()" class="btn-primary">🔄 连接/刷新</button>
     </div>
 </div>
 
-<div class="main-content">
+<div class="main-panel">
     <div class="card-grid">
-        <!-- 技能售卖 -->
         <div class="card">
             <h3>🛠️ 技能售卖终端</h3>
-            <p class="desc">提交知识产出以 Mint 代币。请注意，系统将根据当前政策自动扣除劳动税。</p>
-            <textarea id="answer-text" rows="3" placeholder="输入见解..."></textarea>
-            <button onclick="sellSkill()" class="btn-action btn-blue">确认提交</button>
+            <p class="desc">提交知识产出以 Mint 代币。系统将根据当前政策自动扣除劳动税。</p>
+            <textarea id="answer-text" rows="2" placeholder="输入见解..."></textarea>
+            <button onclick="sellSkill()" class="btn-primary">确认提交</button>
         </div>
-
-        <!-- 金融资产交换 -->
         <div class="card">
-            <h3>⚖️ DEFI（兑换外币）</h3>
-            <p class="desc">JCP ↔ POW 跨期资产交换[cite: 1]。利用市场流动性调整个人资产组合。</p>
+            <h3>⚖️ 金融资产交换</h3>
+            <p class="desc">JCP ↔ POW 跨期资产交换。</p>
             <input type="number" id="swap-amount" placeholder="输入 JCP 数量">
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="approve()" class="btn-action btn-gray" style="flex:1;">1. 授权</button>
-                <button onclick="swap()" class="btn-action btn-gray" style="flex:1;">2. 兑换</button>
+            <div style="display:flex; gap:10px;">
+                <button onclick="approveDEX()" class="btn-primary" style="background:#4a5568">1. 授权</button>
+                <button onclick="swapJCP()" id="btn-swap" class="btn-primary" style="background:#cbd5e0" disabled>2. 兑换</button>
             </div>
         </div>
-
-        <!-- DAO -->
         <div class="card">
             <h3>🏛️ 分散化自治治理中心 (DAO)</h3>
-            <p class="desc">V5 阶段：激活选票后，通过提案表决决定宏观政策。目前状态: <span style="color:red">未激活</span></p>
-            <button onclick="delegate()" class="btn-action btn-gray" style="margin-top:25px;">激活选票 (Delegate)</button>
-            <p style="font-size:0.75rem; color:#95a5a6; margin-top:10px;">等待链上提案...</p>
+            <p class="desc">激活选票后决定宏观政策。目前状态: <span id="dao-status" style="color:red">未激活</span></p>
+            <button onclick="activateDAO()" class="btn-primary" style="background:#95a5a6">激活选票 (Delegate)</button>
         </div>
-
-        <!-- Admin -->
-        <div class="card" style="border-top: 4px solid var(--accent-yellow);">
+        <div class="card" style="border-top: 4px solid #f1c40f;">
             <h3>🕹️ 政策干预面板 (Admin)</h3>
-            <p class="desc">V3-V4: 管理员通过指令调控税率。V5: 此处调用将被“算法规则”拦截。</p>
-            <div style="display:flex; gap:15px;">
-                <div style="flex:1"><label style="font-size:0.8rem">劳动税 (%)</label><input type="number" value="0"></div>
-                <div style="flex:1"><label style="font-size:0.8rem">资本税 (%)</label><input type="number" value="0"></div>
-            </div>
-            <button class="btn-action btn-yellow">执行指令干预</button>
+            <p class="desc">调控税率。V5：调用将被“算法规则”拦截。</p>
+            <button class="btn-primary" style="background:#f1c40f; color:#000">执行指令干预</button>
         </div>
     </div>
-
-    <!-- 底部调试输出 -->
-    <div id="debug-console">> 系统就绪。请确认侧边栏地址后点击“连接/刷新”。</div>
+    <div id="debug-console">> 系统就绪。</div>
 </div>
 
 <script>
-    let provider, signer, contracts = {};
+    let provider, signer, userAddress;
+    const commonABI = ["function balanceOf(address) view returns (uint256)", "function totalSupply() view returns (uint256)", "function approve(address, uint256) returns (bool)", "function delegate(address) external"];
 
     function debugLog(msg, isError = false) {
         const el = document.getElementById('debug-console');
-        const timestamp = new Date().toLocaleTimeString();
-        const color = isError ? "#e06c75" : "#abb2bf";
-        el.innerHTML += `<div style="color: ${color}">[${timestamp}] > ${msg}</div>`;
+        el.innerHTML += `<div style="color:${isError ? '#e06c75' : '#abb2bf'}">> ${msg}</div>`;
         el.scrollTop = el.scrollHeight;
     }
 
     async function connectWallet() {
-    let ethereum = window.ethereum;
-
-    // 如果安装了多个钱包，window.ethereum.providers 会存在
-    if (ethereum && ethereum.providers) {
-        // 寻找 MetaMask 的 provider
-        ethereum = ethereum.providers.find((p) => p.isMetaMask);
-    }
-
-    if (!ethereum || !ethereum.isMetaMask) {
-        debugLog("❌ 未检测到 MetaMask。如果弹出了其他钱包，请在其他钱包设置中关闭'设为默认'。", true);
-        // 如果您不介意用 OKX，这里可以直接 fallback 到普通的 window.ethereum
-    }
-
-    try {
-        provider = new ethers.providers.Web3Provider(ethereum || window.ethereum);
-        debugLog("📡 正在请求 MetaMask 授权...");
-        await provider.send("eth_requestAccounts", []);
-        signer = provider.getSigner();
-        
-        const addr = await signer.getAddress();
-        debugLog(`✅ 已连接 MetaMask: ${addr}`);
-        
-        // 更新 UI 数据
-        updateUI(addr);
-    } catch (e) {
-        debugLog(`❌ 连接失败: ${e.message}`, true);
-    }
-}
-    async function sellSkill() {
-        // 1. 检查连接状态
-        if (!signer) {
-            debugLog("❌ 请先点击侧边栏的“连接/刷新”按钮连接钱包", true);
-            return;
-        }
-
-        const answer = document.getElementById('answer-text').value;
-        if (!answer.trim()) {
-            debugLog("⚠️ 请先输入您的见解或研究成果", true);
-            return;
-        }
-
+        if (!window.ethereum) return debugLog("❌ 未检测到钱包", true);
         try {
-            // 2. 获取侧边栏配置的技能市场合约地址
-            const marketAddr = document.getElementById('conf-market').value;
-            
-            // 3. 定义 ABI (必须包含 sellSkill 方法)
-            const marketABI = [
-                "function sellSkill(string _content) external"
-            ];
-
-            // 4. 创建合约实例
-            const marketContract = new ethers.Contract(marketAddr, marketABI, signer);
-
-            debugLog("📡 正在调用 SkillMarket 合约...");
-            
-            // 5. 执行交易
-            const tx = await marketContract.sellSkill(answer);
-            debugLog(`🚀 交易已发出: ${tx.hash.substring(0, 10)}...`);
-
-            // 6. 等待链上确认
-            await tx.wait();
-            debugLog("✅ 提交成功！系统已为您铸造 20 JCP（已自动扣除劳动税并注入国库）");
-
-            // 7. 刷新余额显示
-            await updateUI(addr);
-
-        } catch (error) {
-            console.error(error);
-            if (error.code === 4001) {
-                debugLog("❌ 交易被拒绝：用户取消了签名", true);
-            } else {
-                debugLog(`❌ 提交失败: ${error.message}`, true);
-            }
-        }
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            userAddress = await signer.getAddress();
+            debugLog(`✅ 已连接: ${userAddress.substring(0,10)}...`);
+            await updateUI();
+        } catch (e) { debugLog("⚠️ 同步失败，请检查网络/地址", true); }
     }
 
     async function updateUI() {
-        try {
-            const addr = await signer.getAddress();
-            const balance = await contracts.jcp.balanceOf(addr);
-            const supply = await contracts.jcp.totalSupply();
-
-            document.getElementById('val-balance').innerText = ethers.utils.formatEther(balance);
-            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
-            
-            debugLog("🔄 链上状态已同步。");
-        } catch (e) {
-            debugLog("⚠️ 数据同步失败，请检查合约地址是否匹配当前网络。", true);
-        }
+        if (!signer) return;
+        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
+        const bal = await jcp.balanceOf(userAddress);
+        const supply = await jcp.totalSupply();
+        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+        document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
+        debugLog("🔄 数据已刷新");
     }
 
-    // 监听链切换或账户切换
-    if (window.ethereum) {
-        window.ethereum.on('accountsChanged', () => window.location.reload());
-        window.ethereum.on('chainChanged', () => window.location.reload());
+    // 1. 技能售卖
+    async function sellSkill() {
+        if (!signer) return debugLog("请先连接钱包", true);
+        const market = new ethers.Contract(document.getElementById('conf-market').value, ["function sellSkill(string) external"], signer);
+        try {
+            const tx = await market.sellSkill(document.getElementById('answer-text').value);
+            debugLog("🚀 提交中...");
+            await tx.wait();
+            debugLog("✅ 铸造成功！已扣除劳动税");
+            updateUI();
+        } catch (e) { debugLog("❌ 提交失败", true); }
+    }
+
+    // 2. DeFi 兑换功能
+    async function approveDEX() {
+        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
+        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value || "100");
+        const tx = await jcp.approve(document.getElementById('conf-exchange').value, amount);
+        debugLog("⏳ 正在授权 DEX...");
+        await tx.wait();
+        debugLog("✅ 授权成功");
+        document.getElementById('btn-swap').disabled = false;
+        document.getElementById('btn-swap').style.background = "#3498db";
+    }
+
+    async function swapJCP() {
+        const dex = new ethers.Contract(document.getElementById('conf-exchange').value, ["function swap(uint256) external"], signer);
+        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+        const tx = await dex.swap(amount);
+        debugLog("🔄 兑换中...");
+        await tx.wait();
+        debugLog("✅ 兑换完成！");
+        updateUI();
+    }
+
+    // 3. DAO 功能
+    async function activateDAO() {
+        const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
+        try {
+            const tx = await jcp.delegate(userAddress);
+            debugLog("🏛️ 正在激活选票...");
+            await tx.wait();
+            document.getElementById('dao-status').innerText = "已激活";
+            document.getElementById('dao-status').style.color = "green";
+            debugLog("✅ 选票已委托给自身，DAO 权限开启");
+        } catch (e) { debugLog("❌ 激活失败", true); }
     }
 </script>
 </body>
