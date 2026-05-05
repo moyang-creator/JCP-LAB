@@ -242,17 +242,30 @@
 
     // --- 3. 连接与 UI 全域监控刷新 (v1-v5 数据同步) ---
     async function connectWallet() {
-        try {
-            if (!window.ethereum) return log("未检测到 MetaMask", true);
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
-            userAddr = await signer.getAddress();
-            log(`已连接: ${userAddr.substring(0,10)}...`);
-            await updateUI();
-            setInterval(updateUI, 10000); // 10秒全域监控同步
-        } catch (e) { log("连接失败: " + e.message, true); }
+    try {
+        if (!window.ethereum) return log("未检测到 MetaMask", true);
+        
+        // 监听网络切换，一旦切换就刷新页面，这是处理 NETWORK_ERROR 最稳妥的方法
+        window.ethereum.on('chainChanged', () => {
+            window.location.reload();
+        });
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddr = await signer.getAddress();
+        
+        // 检查一次网络是否匹配
+        const net = await provider.getNetwork();
+        log(`已连接链ID: ${net.chainId}`);
+        
+        await updateUI();
+        setInterval(updateUI, 10000); 
+    } catch (e) { 
+        log("连接失败", true);
+        log(e, true); 
     }
+}
 
     async function updateUI() {
         if(!signer) return;
