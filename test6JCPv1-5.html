@@ -146,44 +146,34 @@
     }
 
     async function connectWallet() {
-        // 1. 检查环境
-        if (typeof window.ethereum === 'undefined') {
-            debugLog("❌ 未检测到钱包环境：请确认已安装 MetaMask 插件并已解锁。", true);
-            return;
-        }
+    let ethereum = window.ethereum;
 
-        try {
-            // 2. 初始化 Provider 和 Signer
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            
-            // 3. 请求用户授权连接
-            debugLog("📡 正在请求钱包连接授权...");
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
-            const userAddr = await signer.getAddress();
-            
-            debugLog(`✅ 钱包已连接: ${userAddr.substring(0, 6)}...${userAddr.substring(38)}`);
-
-            // 4. 根据侧边栏配置初始化合约对象
-            const commonABI = [
-                "function balanceOf(address) view returns (uint256)",
-                "function totalSupply() view returns (uint256)"
-            ];
-
-            contracts.jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
-            
-            // 5. 更新 UI 数据
-            await updateUI();
-            
-        } catch (error) {
-            console.error(error);
-            if (error.code === 4001) {
-                debugLog("❌ 连接请求被拒绝。", true);
-            } else {
-                debugLog("❌ 连接异常: " + error.message, true);
-            }
-        }
+    // 如果安装了多个钱包，window.ethereum.providers 会存在
+    if (ethereum && ethereum.providers) {
+        // 寻找 MetaMask 的 provider
+        ethereum = ethereum.providers.find((p) => p.isMetaMask);
     }
+
+    if (!ethereum || !ethereum.isMetaMask) {
+        debugLog("❌ 未检测到 MetaMask。如果弹出了其他钱包，请在其他钱包设置中关闭'设为默认'。", true);
+        // 如果您不介意用 OKX，这里可以直接 fallback 到普通的 window.ethereum
+    }
+
+    try {
+        provider = new ethers.providers.Web3Provider(ethereum || window.ethereum);
+        debugLog("📡 正在请求 MetaMask 授权...");
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        
+        const addr = await signer.getAddress();
+        debugLog(`✅ 已连接 MetaMask: ${addr}`);
+        
+        // 更新 UI 数据
+        updateStats(addr);
+    } catch (e) {
+        debugLog(`❌ 连接失败: ${e.message}`, true);
+    }
+}
 
     async function updateUI() {
         try {
