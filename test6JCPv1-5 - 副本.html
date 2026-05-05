@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCP 宏观经济实验站 - 旗舰版 (V1-V5)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" type="application/javascript"></script>
+    <style>
+        :root {
+            --primary: #2c3e50; --accent: #3498db; --success: #27ae60;
+            --error: #e06c75; --warning: #f1c40f; --light-bg: #f8f9fa;
+            --sidebar-bg: #1a252f;
+        }
+
+        body { font-family: 'PingFang SC', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
+
+        /* 布局 */
+        .sidebar { width: 360px; min-width: 360px; background: var(--sidebar-bg); color: white; padding: 20px; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.2); overflow-y: auto; }
+        .main-panel { flex: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* 仪表盘与配置样式 */
+        .stat-group { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid var(--accent); }
+        .stat-group h4 { margin: 0 0 10px 0; font-size: 0.85em; text-transform: uppercase; letter-spacing: 1px; color: #95a5a6; }
+        .stat-item { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 1.1em; }
+        .addr-input { background: rgba(255, 255, 255, 0.1) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #ecf0f1 !important; padding: 6px 8px !important; font-size: 11px !important; font-family: 'Consolas', monospace; margin-top: 4px; width: 100%; border-radius: 4px; box-sizing: border-box; }
+
+        /* 视觉反馈 */
+        @keyframes flash-green { 0% { color: var(--success); text-shadow: 0 0 10px rgba(39,174,96,0.5); } 100% { color: white; } }
+        @keyframes flash-red { 0% { color: var(--error); text-shadow: 0 0 10px rgba(224,108,117,0.5); } 100% { color: white; } }
+        .up-flash { animation: flash-green 1.5s ease-out; }
+        .down-flash { animation: flash-red 1.5s ease-out; }
+
+        /* 卡片设计 */
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e1e4e8; }
+        .card h3 { margin-top: 0; border-bottom: 2px solid var(--light-bg); padding-bottom: 10px; font-size: 1.1em; }
+        .desc { font-size: 0.85em; color: #666; margin-bottom: 12px; line-height: 1.4; }
+
+        .btn-primary { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-primary:disabled { background: #ccc; }
+        .btn-secondary { background: #34495e; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        
+        #debug-console { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px; height: 160px; overflow-y: auto; }
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .swap-box { background: var(--light-bg); padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📊 宏观经济仪表盘</h2>
+    <div class="stat-group">
+        <h4>个人与总量</h4>
+        <div class="stat-item"><span>我的余额:</span> <span id="val-balance">0.00</span> JCP</div>
+        <div class="stat-item"><span>货币总量:</span> <span id="val-supply">0</span></div>
+    </div>
+    <div class="stat-group">
+        <h4>政策指数</h4>
+        <div class="stat-item"><span>国库储备:</span> <span id="val-treasury">0</span></div>
+        <div class="stat-item"><span>劳动/资本税:</span> <span id="val-labor-tax">0</span>% / <span id="val-capital-tax">0</span>%</div>
+    </div>
+    <div class="stat-group">
+        <h4>市场汇率</h4>
+        <div class="stat-item"><span>1 JCP =</span> <span id="val-rate">0.00</span> POW</div>
+    </div>
+    <div class="stat-group" style="background: rgba(0,0,0,0.2);">
+        <h4>⚙️ 实验地址配置</h4>
+        <label style="font-size: 0.7em;">JCP 代币:</label>
+        <input type="text" id="conf-jcp" class="addr-input" value="0x...">
+        <label style="font-size: 0.7em;">技能市场 (V2):</label>
+        <input type="text" id="conf-market" class="addr-input" value="0x...">
+        <label style="font-size: 0.7em;">DEX 交易所 (V4):</label>
+        <input type="text" id="conf-exchange" class="addr-input" value="0x...">
+    </div>
+    <button onclick="connectWallet()" class="btn-secondary">🔄 连接/刷新</button>
+</div>
+
+<div class="main-panel">
+    <div class="action-grid">
+        <div class="card">
+            <h3>🛠️ 技能售卖终端</h3>
+            <p class="desc">提交知识产出以 Mint 代币。请注意，系统将根据当前政策自动扣除劳动税。</p>
+            <textarea id="answer-text" rows="2" placeholder="输入见解..." style="width:100%; margin-bottom:10px;"></textarea>
+            <button onclick="sellSkill()" class="btn-primary">确认提交</button>
+        </div>
+        <div class="card">
+            <h3>💱 金融资产交换</h3>
+            <p class="desc">JCP ↔ POW 跨期资产交换。利用市场流动性调整个人资产组合。</p>
+            <input type="number" id="swap-in-amount" placeholder="输入 JCP 数量" style="width:100%; margin-bottom:10px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="approveJCP()" class="btn-primary" style="background:#34495e;">1. 授权</button>
+                <button id="btn-swap" onclick="swapAssets()" class="btn-primary" disabled>2. 兑换</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-grid">
+        <div class="card">
+            <h3>🏛️ 分散化自治治理中心 (DAO)</h3>
+            <p class="desc">V5 阶段：激活选票后，通过提案表决决定宏观政策。目前状态: <strong id="voter-status" style="color:var(--error)">未激活</strong></p>
+            <button onclick="activateVotes()" class="btn-primary" style="background: #95a5a6; margin-bottom:10px;">激活选票 (Delegate)</button>
+            <div id="proposal-container" style="font-size: 0.85em; color: #999;">等待链上提案...</div>
+        </div>
+
+        <div class="card" style="border-top: 4px solid var(--warning);">
+            <h3>🕹️ 政策干预面板 (Admin)</h3>
+            <p class="desc"><strong>V3-V4:</strong> 管理员通过指令调控税率。<br><strong>V5:</strong> 此处调用将被“算法规制”拦截。</p>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:0.75em;">劳动税 (%)</label>
+                    <input type="number" id="set-labor" value="0" step="0.1">
+                </div>
+                <div>
+                    <label style="font-size:0.75em;">资本税 (%)</label>
+                    <input type="number" id="set-capital" value="0" step="0.1">
+                </div>
+            </div>
+            <button onclick="manualSetTax()" class="btn-primary" style="background: var(--warning); color: #2c3e50;">执行指令干预</button>
+        </div>
+    </div>
+
+    <div id="debug-console">> 系统就绪。请确认侧边栏地址后点击“连接/刷新”。</div>
+</div>
+
+<script>
+    const jcpABI = [
+        "function balanceOf(address) view returns (uint256)",
+        "function totalSupply() view returns (uint256)",
+        "function treasury() view returns (address)",
+        "function laborTaxRate() view returns (uint256)",
+        "function capitalTaxRate() view returns (uint256)",
+        "function setLaborTaxRate(uint256) external",
+        "function setCapitalTaxRate(uint256) external",
+        "function approve(address, uint256) returns (bool)",
+        "function delegate(address)",
+        "function delegates(address) view returns (address)"
+    ];
+    const marketABI = ["function sellSkill(string) external"];
+    const exchangeABI = ["function jcpReserve() view returns (uint256)", "function powReserve() view returns (uint256)", "function swapJCPForPOW(uint256) external"];
+
+    let provider, signer, jcpTokenContract, skillMarketContract, exchangeContract;
+    let lastData = { supply: 0, labor: 0 };
+
+    async function connectWallet() {
+        if (!window.ethereum) return debugLog("未检测到 MetaMask", true);
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+
+        const JCP_ADDR = document.getElementById('conf-jcp').value.trim();
+        const MKT_ADDR = document.getElementById('conf-market').value.trim();
+        const DEX_ADDR = document.getElementById('conf-exchange').value.trim();
+
+        if (ethers.utils.isAddress(JCP_ADDR)) jcpTokenContract = new ethers.Contract(JCP_ADDR, jcpABI, signer);
+        if (ethers.utils.isAddress(MKT_ADDR)) skillMarketContract = new ethers.Contract(MKT_ADDR, marketABI, signer);
+        if (ethers.utils.isAddress(DEX_ADDR)) exchangeContract = new ethers.Contract(DEX_ADDR, exchangeABI, signer);
+
+        debugLog("✅ 环境同步成功");
+        updateDashboard();
+    }
+
+    async function updateDashboard() {
+        try {
+            const userAddr = await signer.getAddress();
+            const bal = await jcpTokenContract.balanceOf(userAddr);
+            const supply = await jcpTokenContract.totalSupply();
+            const lTax = await jcpTokenContract.laborTaxRate();
+            const cTax = await jcpTokenContract.capitalTaxRate();
+
+            renderVal('val-balance', ethers.utils.formatEther(bal), 2);
+            renderVal('val-supply', ethers.utils.formatEther(supply), 0, lastData.supply);
+            document.getElementById('val-labor-tax').innerText = lTax / 100;
+            document.getElementById('val-capital-tax').innerText = cTax / 100;
+
+            const delegatedTo = await jcpTokenContract.delegates(userAddr);
+            if(delegatedTo.toLowerCase() === userAddr.toLowerCase()){
+                const vs = document.getElementById('voter-status');
+                vs.innerText = "已激活"; vs.style.color = "var(--success)";
+            }
+            lastData.supply = supply;
+            setTimeout(updateDashboard, 10000);
+        } catch (e) {}
+    }
+
+    async function manualSetTax() {
+        try {
+            const lVal = document.getElementById('set-labor').value * 100;
+            const cVal = document.getElementById('set-capital').value * 100;
+            debugLog(`📡 执行政策指令: 调控劳动税至 ${lVal/100}%...`);
+            const tx1 = await jcpTokenContract.setLaborTaxRate(lVal);
+            await tx1.wait();
+            const tx2 = await jcpTokenContract.setCapitalTaxRate(cVal);
+            await tx2.wait();
+            debugLog("✅ 政策调控生效。");
+        } catch (e) {
+            debugLog("❌ 干预失败：权限不足或已被 DAO 锁定", true);
+        }
+    }
+
+    function renderVal(id, val, fix, oldVal = null) {
+        const el = document.getElementById(id);
+        const num = parseFloat(val);
+        if(oldVal && num != parseFloat(ethers.utils.formatEther(oldVal))) {
+            el.classList.remove('up-flash', 'down-flash');
+            void el.offsetWidth;
+            el.classList.add(num > parseFloat(ethers.utils.formatEther(oldVal)) ? 'up-flash' : 'down-flash');
+        }
+        el.innerText = num.toFixed(fix);
+    }
+
+    async function sellSkill() {
+        try {
+            const tx = await skillMarketContract.sellSkill(document.getElementById('answer-text').value);
+            await tx.wait();
+            debugLog("✅ 变现成功");
+        } catch (e) { debugLog("提交失败", true); }
+    }
+
+    function debugLog(msg, isError = false) {
+        const consoleEl = document.getElementById('debug-console');
+        const div = document.createElement('div');
+        if(isError) div.style.color = "var(--error)";
+        div.innerText = `> ${new Date().toLocaleTimeString()}: ${msg}`;
+        consoleEl.appendChild(div);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // V4 逻辑简略实现
+    async function approveJCP() {
+        const tx = await jcpTokenContract.approve(document.getElementById('conf-exchange').value, ethers.utils.parseUnits("1000", 18));
+        await tx.wait();
+        document.getElementById('btn-swap').disabled = false;
+        debugLog("🔓 授权成功");
+    }
+</script>
+</body>
+</html>
