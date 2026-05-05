@@ -178,18 +178,61 @@
 
     // 1. 技能售卖
     async function sellSkill() {
-        if (!signer) return debugLog("请先连接钱包", true);
-        const marketAddr = document.getElementById('conf-market').value;
-        const market = new ethers.Contract(marketAddr, ["function sellSkill(string) external"], signer);
-        try {
-            const text = document.getElementById('answer-text').value;
-            const tx = await market.sellSkill(text || "Academic Insight Submission");
-            debugLog("🚀 交易已发出，等待链上确认...");
-            await tx.wait();
-            debugLog("✅ 铸造成功！20 JCP 已发放（劳动税已自动注入国库）[cite: 1]");
-            updateUI();
-        } catch (e) { debugLog("❌ 提交失败，请检查合约权限", true); }
+    if (!signer) return debugLog("❌ 请先连接钱包", true);
+    
+    const marketAddr = document.getElementById('conf-market').value;
+    const answerText = document.getElementById('answer-text').value;
+
+    // 增加对地址的合法性检查
+    if (!ethers.utils.isAddress(marketAddr)) {
+        return debugLog("❌ 技能市场合约地址格式不正确", true);
     }
+
+    const market = new ethers.Contract(marketAddr, [
+        "function sellSkill(string) external"
+    ], signer);
+
+    try {
+        debugLog("📡 正在尝试调用 SkillMarket.sellSkill()...");
+        
+        // 发起交易，如果这里直接报错，通常是 Gas 预估失败（合约内部 require 触发）
+        const tx = await market.sellSkill(answerText || "Academic Insight Submission", {
+            gasLimit: 300000 // 强制设定 Gas 限制，防止因预估失败导致的静默退出
+        });
+
+        debugLog(`🚀 交易已发出: ${tx.hash.substring(0, 10)}...`);
+        await tx.wait();
+        
+        debugLog("✅ 铸造成功！20 JCP 已发放（劳动税已自动注入国库）[cite: 1]");
+        await updateUI(); // 成功后刷新左侧余额
+
+    } catch (e) {
+        console.error("Full Error Object:", e); // 依然在控制台保留完整对象
+
+        // --- 深度错误诊断逻辑 ---
+        let errorMsg = e.message;
+        
+        // 1. 捕捉合约返回的 Reason (例如 require 的报错信息)
+        if (e.data && e.data.message) {
+            errorMsg = e.data.message;
+        } else if (e.reason) {
+            errorMsg = e.reason;
+        } else if (e.error && e.error.data && e.error.data.message) {
+            errorMsg = e.error.data.message;
+        }
+
+        // 2. 针对常见错误的友好化处理
+        if (errorMsg.includes("user rejected")) {
+            debugLog("❌ 用户取消了签名请求", true);
+        } else if (errorMsg.includes("execution reverted")) {
+            debugLog(`⚠️ 合约逻辑拒绝: ${errorMsg.replace("execution reverted: ", "")}`, true);
+        } else {
+            debugLog(`❌ 详细错误: ${errorMsg.substring(0, 80)}...`, true);
+        }
+        
+        debugLog("💡 提示：请检查当前账户是否拥有 Mint 权限，或国库地址是否已正确设置[cite: 1]", false);
+    }
+}
 
     // 2. DeFi 兑换
     async function approveDEX() {
