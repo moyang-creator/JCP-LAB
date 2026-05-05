@@ -1,0 +1,107 @@
+// --- 1. 强化版 log 函数：支持直接打印错误对象 ---
+    function log(msg, err = false) {
+        const consoleBox = document.getElementById('debug-console');
+        if (consoleBox) {
+            let displayMsg = msg;
+            
+            // 如果 msg 是一个对象（即捕捉到的 e），尝试提取其核心错误信息
+            if (typeof msg === 'object') {
+                // 优先提取合约返回的 reason，其次是通用 message，最后转为 JSON 字符串
+                displayMsg = msg.reason || msg.message || JSON.stringify(msg);
+                console.log("详细错误堆栈:", msg); // 并在浏览器 F12 控制台保留完整对象以便深度检查
+            }
+
+            const color = err ? '#f8d7da' : '#abb2bf'; // 错误时使用浅红色背景或亮色文字
+            const border = err ? 'border-left: 4px solid #e06c75;' : '';
+            
+            consoleBox.innerHTML += `
+                <div style="color:${err ? '#e06c75' : '#abb2bf'}; ${border} margin-bottom: 5px; padding: 2px 5px;">
+                    [${new Date().toLocaleTimeString()}] > ${displayMsg}
+                </div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+    }
+
+    // --- 2. 完善后的业务逻辑（全量覆盖 e 输出） ---
+
+    // [v1] 技能售卖
+    async function sellSkill() {
+        try {
+            const market = new ethers.Contract(getAddrs().market, MARKET_ABI, signer);
+            const tx = await market.sellSkill(document.getElementById('answer-text').value);
+            log("劳动成果提交中...");
+            await tx.wait();
+            log("成果确认成功");
+            updateUI();
+        } catch (e) { 
+            log("【产出失败】", true); 
+            log(e, true); // 始终输出 e
+        }
+    }
+
+    // [v2] 政策调整
+    async function updatePolicy(type) {
+        try {
+            const jcp = new ethers.Contract(getAddrs().jcp, JCP_ABI, signer);
+            const val = type === 'labor' ? document.getElementById('p-labor').value : document.getElementById('p-capital').value;
+            const tx = type === 'labor' ? await jcp.setLaborTaxRate(val) : await jcp.setCapitalTaxRate(val);
+            log("提交政策指令...");
+            await tx.wait();
+            log("政策已生效");
+            updateUI();
+        } catch (e) { 
+            log("【调控拒绝】", true);
+            log(e, true); // 始终输出 e
+        }
+    }
+
+    // [v3/v4] DEX 兑换与 LP 注入
+    async function executeSwap() {
+        try {
+            const addrs = getAddrs();
+            const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
+            const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+            const dir = document.getElementById('swap-direction').value;
+            const path = dir === "JCPtoUSD" ? [addrs.jcp, addrs.usd] : [addrs.usd, addrs.jcp];
+            const tx = await dex.swapExactTokensForTokens(amount, 0, path, userAddr, 9999999999);
+            log("正在市场兑换...");
+            await tx.wait();
+            log("兑换完成");
+            updateUI();
+        } catch (e) { 
+            log("【兑换失败】", true);
+            log(e, true); // 始终输出 e[cite: 3]
+        }
+    }
+
+    async function manageLP(action) {
+        try {
+            const addrs = getAddrs();
+            const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
+            const valJCP = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
+            const valUSD = ethers.utils.parseEther(document.getElementById('lp-usd').value);
+            // 重点检查此处：如果之前成功现在失败，e 会告诉你是否是由于税收导致的滑点问题
+            const tx = await dex.addLiquidity(valJCP, valUSD, 0, 0, userAddr, 9999999999);
+            log("发起 LP 注入...");
+            await tx.wait();
+            log("注入成功");
+            updateUI();
+        } catch (e) { 
+            log("【LP 注入失败】", true);
+            log(e, true); // 始终输出 e[cite: 3]
+        }
+    }
+
+    // [v5] DAO 治理
+    async function castVote(support) {
+        try {
+            const dao = new ethers.Contract(getAddrs().dao, DAO_ABI, signer);
+            const tx = await dao.castVote(document.getElementById('query-id').value, support);
+            log("投递选票...");
+            await tx.wait();
+            log("投票登记成功");
+        } catch (e) { 
+            log("【投票失败】", true);
+            log(e, true); // 始终输出 e[cite: 2, 3]
+        }
+    }

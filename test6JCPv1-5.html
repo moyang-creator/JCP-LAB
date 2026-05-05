@@ -206,11 +206,26 @@
     let provider, signer, userAddr;
 
     // --- 2. 核心辅助函数 ---
-    function log(msg, err=false) {
-        const console = document.getElementById('debug-console');
-        if(console) {
-            console.innerHTML += `<div style="color:${err?'#e06c75':'#abb2bf'}">[${new Date().toLocaleTimeString()}] > ${msg}</div>`;
-            console.scrollTop = console.scrollHeight;
+    function log(msg, err = false) {
+        const consoleBox = document.getElementById('debug-console');
+        if (consoleBox) {
+            let displayMsg = msg;
+            
+            // 如果 msg 是一个对象（即捕捉到的 e），尝试提取其核心错误信息
+            if (typeof msg === 'object') {
+                // 优先提取合约返回的 reason，其次是通用 message，最后转为 JSON 字符串
+                displayMsg = msg.reason || msg.message || JSON.stringify(msg);
+                console.log("详细错误堆栈:", msg); // 并在浏览器 F12 控制台保留完整对象以便深度检查
+            }
+
+            const color = err ? '#f8d7da' : '#abb2bf'; // 错误时使用浅红色背景或亮色文字
+            const border = err ? 'border-left: 4px solid #e06c75;' : '';
+            
+            consoleBox.innerHTML += `
+                <div style="color:${err ? '#e06c75' : '#abb2bf'}; ${border} margin-bottom: 5px; padding: 2px 5px;">
+                    [${new Date().toLocaleTimeString()}] > ${displayMsg}
+                </div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
         }
     }
 
@@ -282,30 +297,36 @@
     // --- 4. 功能实现逻辑 ---
 
     // [v1 逻辑] 技能售卖与产出
+    // --- 2. 完善后的业务逻辑（全量覆盖 e 输出） ---    
     async function sellSkill() {
-        const desc = document.getElementById('answer-text').value;
-        if(!desc) return log("请输入成果描述", true);
         try {
             const market = new ethers.Contract(getAddrs().market, MARKET_ABI, signer);
-            const tx = await market.sellSkill(desc);
+            const tx = await market.sellSkill(document.getElementById('answer-text').value);
             log("劳动成果提交中...");
             await tx.wait();
-            log("成果确认，JCP 已按实时税率发放");
+            log("成果确认成功");
             updateUI();
-        } catch (e) { log("产出失败: " + e.message, true); }
+        } catch (e) { 
+            log("【产出失败】", true); 
+            log(e, true); // 始终输出 e
+        }
     }
 
     // [v2 逻辑] 宏观政策手动调整
+    // [v2] 政策调整
     async function updatePolicy(type) {
         try {
             const jcp = new ethers.Contract(getAddrs().jcp, JCP_ABI, signer);
             const val = type === 'labor' ? document.getElementById('p-labor').value : document.getElementById('p-capital').value;
             const tx = type === 'labor' ? await jcp.setLaborTaxRate(val) : await jcp.setCapitalTaxRate(val);
-            log(`执行宏观调控: ${type} -> ${val} BP`);
+            log("提交政策指令...");
             await tx.wait();
-            log("税率调整已链上生效");
+            log("政策已生效");
             updateUI();
-        } catch (e) { log("调控拒绝: 权限已移交 DAO 或非管理员", true); }
+        } catch (e) { 
+            log("【调控拒绝】", true);
+            log(e, true); // 始终输出 e
+        }
     }
 
     // [v3 逻辑] 资产授权与 DEX 兑换
@@ -320,21 +341,23 @@
         } catch (e) { log("授权失败", true); }
     }
 
+    / [v3/v4] DEX 兑换与 LP 注入
     async function executeSwap() {
-        const amountStr = document.getElementById('swap-amount').value;
-        if(!amountStr) return;
         try {
             const addrs = getAddrs();
             const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
-            const amount = ethers.utils.parseEther(amountStr);
+            const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
             const dir = document.getElementById('swap-direction').value;
             const path = dir === "JCPtoUSD" ? [addrs.jcp, addrs.usd] : [addrs.usd, addrs.jcp];
             const tx = await dex.swapExactTokensForTokens(amount, 0, path, userAddr, 9999999999);
-            log("执行市场兑换...");
+            log("正在市场兑换...");
             await tx.wait();
-            log("交易成功，余额已更新");
+            log("兑换完成");
             updateUI();
-        } catch (e) { log("兑换失败：请检查授权或余额", true); }
+        } catch (e) { 
+            log("【兑换失败】", true);
+            log(e, true); // 始终输出 e[cite: 3]
+        }
     }
 
     // [v4 逻辑] 流动性注入
@@ -344,12 +367,16 @@
             const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
             const valJCP = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
             const valUSD = ethers.utils.parseEther(document.getElementById('lp-usd').value);
+            // 重点检查此处：如果之前成功现在失败，e 会告诉你是否是由于税收导致的滑点问题
             const tx = await dex.addLiquidity(valJCP, valUSD, 0, 0, userAddr, 9999999999);
-            log("正在注入流动性...");
+            log("发起 LP 注入...");
             await tx.wait();
-            log("LP 注入成功，池子深度增加");
+            log("注入成功");
             updateUI();
-        } catch (e) { log("LP 注入失败", true); }
+        } catch (e) { 
+            log("【LP 注入失败】", true);
+            log(e, true); // 始终输出 e[cite: 3]
+        }
     }
 
     // [v5 逻辑] DAO 治理全流程
@@ -395,16 +422,18 @@
         } catch (e) { log("提案查询失败", true); }
     }
 
+    // [v5] DAO 治理
     async function castVote(support) {
-        const id = document.getElementById('query-id').value;
         try {
             const dao = new ethers.Contract(getAddrs().dao, DAO_ABI, signer);
-            const tx = await dao.castVote(id, support);
-            log(`投出${support?'赞成':'反对'}票...`);
+            const tx = await dao.castVote(document.getElementById('query-id').value, support);
+            log("投递选票...");
             await tx.wait();
-            log("投票已上链");
-            refreshProposal();
-        } catch (e) { log("投票拒绝：已投过或权重不足", true); }
+            log("投票登记成功");
+        } catch (e) { 
+            log("【投票失败】", true);
+            log(e, true); // 始终输出 e[cite: 2, 3]
+        }
     }
 
     async function executeProposal() {
