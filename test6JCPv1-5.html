@@ -174,7 +174,7 @@
 </div>
 
 <script>
-    // 1. ABI 定义
+    // --- 1. 全局配置与 ABI (全域监控量基础) ---
     const JCP_ABI = [
         "function laborTaxRate() view returns (uint256)",
         "function capitalTaxRate() view returns (uint256)",
@@ -189,7 +189,6 @@
     ];
     const ERC20_ABI = [
         "function balanceOf(address) view returns (uint256)", 
-        "function totalSupply() view returns (uint256)",
         "function approve(address, uint256) external returns (bool)"
     ];
     const MARKET_ABI = ["function sellSkill(string) external"];
@@ -206,10 +205,13 @@
 
     let provider, signer, userAddr;
 
+    // --- 2. 核心辅助函数 ---
     function log(msg, err=false) {
         const console = document.getElementById('debug-console');
-        console.innerHTML += `<div style="color:${err?'#e06c75':'#abb2bf'}">[${new Date().toLocaleTimeString()}] > ${msg}</div>`;
-        console.scrollTop = console.scrollHeight;
+        if(console) {
+            console.innerHTML += `<div style="color:${err?'#e06c75':'#abb2bf'}">[${new Date().toLocaleTimeString()}] > ${msg}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
     }
 
     function getAddrs() {
@@ -223,7 +225,7 @@
         };
     }
 
-    // 2. 初始化与连接
+    // --- 3. 连接与 UI 全域监控刷新 (v1-v5 数据同步) ---
     async function connectWallet() {
         try {
             if (!window.ethereum) return log("未检测到 MetaMask", true);
@@ -231,10 +233,10 @@
             await provider.send("eth_requestAccounts", []);
             signer = provider.getSigner();
             userAddr = await signer.getAddress();
-            log(`连接成功: ${userAddr.substring(0,10)}...`);
+            log(`已连接: ${userAddr.substring(0,10)}...`);
             await updateUI();
-            setInterval(updateUI, 10000); 
-        } catch (e) { log("连接中断: " + e.message, true); }
+            setInterval(updateUI, 10000); // 10秒全域监控同步
+        } catch (e) { log("连接失败: " + e.message, true); }
     }
 
     async function updateUI() {
@@ -244,7 +246,7 @@
             const jcp = new ethers.Contract(addrs.jcp, JCP_ABI, signer);
             const usd = new ethers.Contract(addrs.usd, ERC20_ABI, signer);
 
-            // 基础数据同步
+            // [监控量] 基础宏观数据 (v1, v2)
             const [lTax, cTax, myJcp, myUsd, supply, pRole] = await Promise.all([
                 jcp.laborTaxRate(), jcp.capitalTaxRate(), jcp.balanceOf(userAddr), 
                 usd.balanceOf(userAddr), jcp.totalSupply(), jcp.POLICY_ROLE()
@@ -256,7 +258,7 @@
             document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(myUsd);
             document.getElementById('sys-jcp-total').innerText = parseFloat(ethers.utils.formatEther(supply)).toLocaleString();
 
-            // DEX 资金池数据 [修正]
+            // [监控量] DEX 池储备与价格 (v3, v4)
             const [dexJcpBal, dexUsdBal] = await Promise.all([
                 jcp.balanceOf(addrs.dex), usd.balanceOf(addrs.dex)
             ]);
@@ -268,77 +270,97 @@
                 document.getElementById('dex-price').innerText = price.toFixed(4) + " USD/JCP";
             }
 
-            // 治理权限状态
+            // [监控量] 治理状态 (v5)[cite: 2]
             const isDaoControlled = await jcp.hasRole(pRole, addrs.dao);
             const lock = document.getElementById('lock-status');
             lock.innerText = isDaoControlled ? "DAO 治理锁定" : "手动管理";
             lock.className = isDaoControlled ? "lock-tag lock-active" : "lock-tag";
             
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("UI同步异常", e); }
     }
 
-    // 3. 交互函数
+    // --- 4. 功能实现逻辑 ---
+
+    // [v1 逻辑] 技能售卖与产出
     async function sellSkill() {
         const desc = document.getElementById('answer-text').value;
         if(!desc) return log("请输入成果描述", true);
         try {
             const market = new ethers.Contract(getAddrs().market, MARKET_ABI, signer);
             const tx = await market.sellSkill(desc);
-            log("提交中...");
+            log("劳动成果提交中...");
             await tx.wait();
-            log("成果已确认，JCP 已入账");
+            log("成果确认，JCP 已按实时税率发放");
             updateUI();
-        } catch (e) { log("提交失败: " + e.message, true); }
+        } catch (e) { log("产出失败: " + e.message, true); }
     }
 
+    // [v2 逻辑] 宏观政策手动调整
     async function updatePolicy(type) {
         try {
             const jcp = new ethers.Contract(getAddrs().jcp, JCP_ABI, signer);
             const val = type === 'labor' ? document.getElementById('p-labor').value : document.getElementById('p-capital').value;
             const tx = type === 'labor' ? await jcp.setLaborTaxRate(val) : await jcp.setCapitalTaxRate(val);
-            log("正在发送宏观指令...");
+            log(`执行宏观调控: ${type} -> ${val} BP`);
             await tx.wait();
-            log("税率更新成功");
+            log("税率调整已链上生效");
             updateUI();
-        } catch (e) { log("操作被拒绝: 权限不足或已进入 DAO 时代", true); }
+        } catch (e) { log("调控拒绝: 权限已移交 DAO 或非管理员", true); }
     }
 
+    // [v3 逻辑] 资产授权与 DEX 兑换
     async function approveDEX(tokenType) {
         try {
             const addrs = getAddrs();
             const contract = new ethers.Contract(tokenType === 'jcp' ? addrs.jcp : addrs.usd, ERC20_ABI, signer);
             const tx = await contract.approve(addrs.dex, ethers.constants.MaxUint256);
-            log(`正在授权 ${tokenType.toUpperCase()}...`);
+            log(`请求授权 ${tokenType.toUpperCase()}...`);
             await tx.wait();
             log("授权成功");
-        } catch (e) { log("授权失败: " + e.message, true); }
+        } catch (e) { log("授权失败", true); }
     }
 
     async function executeSwap() {
         const amountStr = document.getElementById('swap-amount').value;
         if(!amountStr) return;
-        const amount = ethers.utils.parseEther(amountStr);
-        const dir = document.getElementById('swap-direction').value;
-        const addrs = getAddrs();
         try {
+            const addrs = getAddrs();
             const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
+            const amount = ethers.utils.parseEther(amountStr);
+            const dir = document.getElementById('swap-direction').value;
             const path = dir === "JCPtoUSD" ? [addrs.jcp, addrs.usd] : [addrs.usd, addrs.jcp];
             const tx = await dex.swapExactTokensForTokens(amount, 0, path, userAddr, 9999999999);
-            log("交易执行中...");
+            log("执行市场兑换...");
             await tx.wait();
-            log("兑换完成");
+            log("交易成功，余额已更新");
             updateUI();
-        } catch (e) { log("兑换失败: 检查余额与授权", true); }
+        } catch (e) { log("兑换失败：请检查授权或余额", true); }
     }
 
+    // [v4 逻辑] 流动性注入
+    async function manageLP(action) {
+        try {
+            const addrs = getAddrs();
+            const dex = new ethers.Contract(addrs.dex, EXCHANGE_ABI, signer);
+            const valJCP = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
+            const valUSD = ethers.utils.parseEther(document.getElementById('lp-usd').value);
+            const tx = await dex.addLiquidity(valJCP, valUSD, 0, 0, userAddr, 9999999999);
+            log("正在注入流动性...");
+            await tx.wait();
+            log("LP 注入成功，池子深度增加");
+            updateUI();
+        } catch (e) { log("LP 注入失败", true); }
+    }
+
+    // [v5 逻辑] DAO 治理全流程
     async function delegateSelf() {
         try {
             const jcp = new ethers.Contract(getAddrs().jcp, JCP_ABI, signer);
             const tx = await jcp.delegate(userAddr);
-            log("正在激活选票...");
+            log("激活选票中...");
             await tx.wait();
-            log("选票激活成功");
-        } catch (e) { log("激活失败: " + e.message, true); }
+            log("选票已激活，可参与投票");
+        } catch (e) { log("激活失败", true); }
     }
 
     async function createProposal() {
@@ -350,10 +372,10 @@
                 document.getElementById('prop-addr').value || ethers.constants.AddressZero,
                 document.getElementById('prop-desc').value
             );
-            log("正在发布提案...");
+            log("提交治理提案...");
             await tx.wait();
-            log("DAO 提案发布成功");
-        } catch (e) { log("发布失败", true); }
+            log("提案已发布，进入公示期");
+        } catch (e) { log("提案失败", true); }
     }
 
     async function refreshProposal() {
@@ -363,13 +385,14 @@
             const dao = new ethers.Contract(getAddrs().dao, DAO_ABI, signer);
             const res = await dao.checkProposalDashboard(id);
             document.getElementById('proposal-board').innerHTML = `
-                <b>描述:</b> ${res[0]}<br>
-                <b>状态:</b> ${res[1]}<br>
-                <b>赞成:</b> ${ethers.utils.formatEther(res[2])}<br>
-                <b>反对:</b> ${ethers.utils.formatEther(res[3])}<br>
-                <b>执行者:</b> ${res[5]}
+                <div style="background:#282c34; padding:10px; border-radius:4px; margin-top:5px">
+                    <b>描述:</b> ${res[0]}<br>
+                    <b>状态:</b> <span style="color:#61afef">${res[1]}</span><br>
+                    <b>赞成票:</b> ${ethers.utils.formatEther(res[2])}<br>
+                    <b>反对票:</b> ${ethers.utils.formatEther(res[3])}
+                </div>
             `;
-        } catch (e) { log("查询失败", true); }
+        } catch (e) { log("提案查询失败", true); }
     }
 
     async function castVote(support) {
@@ -377,11 +400,11 @@
         try {
             const dao = new ethers.Contract(getAddrs().dao, DAO_ABI, signer);
             const tx = await dao.castVote(id, support);
-            log("正在投票...");
+            log(`投出${support?'赞成':'反对'}票...`);
             await tx.wait();
-            log("投票已计入");
+            log("投票已上链");
             refreshProposal();
-        } catch (e) { log("投票失败", true); }
+        } catch (e) { log("投票拒绝：已投过或权重不足", true); }
     }
 
     async function executeProposal() {
@@ -389,11 +412,11 @@
         try {
             const dao = new ethers.Contract(getAddrs().dao, DAO_ABI, signer);
             const tx = await dao.executeProposal(id);
-            log("正在尝试执行提案...");
+            log("触发提案执行...");
             await tx.wait();
-            log("执行成功，宏观经济参数已变更");
+            log("提案执行成功，宏观参数已自动同步");
             updateUI();
-        } catch (e) { log("执行条件未达成", true); }
+        } catch (e) { log("执行失败：可能投票未达标或未过公示期", true); }
     }
 </script>
 </body>
