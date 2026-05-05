@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>JCP 宏观经济仪表盘 V2.1</title>
+    <title>JCP 宏观经济仪表盘 V2.3</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
-        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; }
+        :root { --sidebar-bg: #1e252b; --card-bg: #ffffff; --main-bg: #f0f2f5; --warning-red: #e74c3c; }
         body { font-family: 'PingFang SC', sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
         .sidebar { width: 280px; background: var(--sidebar-bg); color: white; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
         .sidebar h2 { font-size: 1.1rem; margin-bottom: 15px; color: #3498db; }
@@ -14,6 +14,8 @@
         .data-row { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 0.85rem; }
         .val { color: #2ecc71; font-family: monospace; }
         .config-hint { font-size: 0.65rem; color: #f1c40f; margin-bottom: 5px; line-height: 1.2; border-left: 2px solid #f1c40f; padding-left: 5px; }
+        /* 新增授权提示样式 */
+        .auth-warning { font-size: 0.75rem; color: var(--warning-red); background: rgba(231, 76, 60, 0.1); padding: 8px; border-radius: 4px; border: 1px solid var(--warning-red); margin-bottom: 10px; font-weight: bold; }
         .config-input { width: 100%; background: #2c3e50; border: 1px solid #3e4e5e; color: #fff; padding: 4px; font-size: 9px; border-radius: 3px; margin-bottom: 4px; box-sizing: border-box; }
         .main-panel { flex: 1; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 15px; overflow-y: auto; }
         .card { background: var(--card-bg); padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -55,7 +57,7 @@
 
     <div class="sidebar-section">
         <h4>⚙️ 系统配置</h4>
-        <div class="config-hint">请填入合约部署后的 0x 地址，随后点击下方连接。</div>
+        <div class="config-hint">请确保填入正确的 V3 合约地址后连接。</div>
         <span style="font-size: 9px; color: #88929b;">JCP 代币合约:</span>
         <input type="text" id="conf-jcp" class="config-input" value="0xb1b96f98cF89e7621dCc36e06E09457DAF28E8CB">
         <span style="font-size: 9px; color: #88929b;">USD 代币合约:</span>
@@ -65,21 +67,22 @@
         <span style="font-size: 9px; color: #88929b;">技能市场/国库:</span>
         <input type="text" id="conf-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
         <input type="hidden" id="conf-treasury" value="0xA10794996E67382847082932C57cd00103e5dAA4">
-        <button onclick="connectWallet()" class="btn btn-blue" style="width:100%; margin-top:5px;">🔄 连接并刷新数据</button>
+        <button onclick="connectWallet()" class="btn btn-blue" style="width:100%; margin-top:5px;">🔄 连接并同步 V3</button>
     </div>
 </div>
 
 <div class="main-panel">
     <div class="card">
         <h3>🛠️ 技能售卖终端</h3>
-        <p class="desc">提交见解获取 JCP。</p>
+        <p class="desc">提交见解获取 JCP[cite: 1]。</p>
         <textarea id="answer-text" rows="2" placeholder="输入您的研究成果..."></textarea>
         <button onclick="sellSkill()" class="btn btn-blue" style="width:100%; margin-top:8px;">确认提交</button>
     </div>
 
     <div class="card">
         <h3>⚖️ 资产交易 (Swap)</h3>
-        <p class="desc">JCP 与 USD 的双向价值交换[cite: 1]。</p>
+        <div class="auth-warning">⚠️ 务必先在下方分别点一下 “授权 JCP” 和 “授权 USD”，否则兑换将失败！</div>
+        <p class="desc">适配 JCPExchangeV3 兑换逻辑[cite: 1]。</p>
         <div class="input-group">
             <input type="number" id="swap-amount" placeholder="输入数量">
             <select id="swap-direction">
@@ -96,7 +99,8 @@
 
     <div class="card">
         <h3>🌊 流动性池管理</h3>
-        <p class="desc">注入资产提供流动性或提取份额[cite: 1]。</p>
+        <div class="auth-warning">⚠️ 操作前请确认已在“资产交易”卡片完成代币授权！</div>
+        <p class="desc">基于 $x \times y = k$ 注入或提取[cite: 1]。</p>
         <div class="input-group">
             <input type="number" id="lp-jcp" placeholder="JCP 数量">
             <input type="number" id="lp-usd" placeholder="USD 数量">
@@ -109,24 +113,23 @@
 
     <div class="card">
         <h3>🏛️ DAO 治理</h3>
-        <p class="desc">激活选票以参与宏观政策调整[cite: 1]。</p>
+        <p class="desc">激活选票以参与治理[cite: 1]。</p>
         <div id="dao-status" style="font-size:0.8rem; margin-bottom:10px; color:#e74c3c;">状态：未激活选票</div>
         <button onclick="activateDAO()" class="btn btn-blue" style="width:100%;">激活选票 (Delegate)</button>
     </div>
 
-    <div id="debug-console">> 初始化完毕，等待连接。</div>
+    <div id="debug-console">> 环境就绪，请连接钱包。</div>
 </div>
 
 <script>
     let provider, signer, userAddr;
     const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function totalSupply() view returns (uint256)", "function approve(address, uint256) returns (bool)", "function delegate(address) external"];
-     // 1. 更新 ABI 以匹配您的 V3 合约
     const DEX_ABI = [
-    "function swapJCPForJCPUSD(uint256) external",
-    "function swapJCPUSDForJCP(uint256) external",
-    "function addLiquidity(uint256, uint256) external",
-    "function removeLiquidity(uint256) external",
-    "function getPoolStats() view returns (uint256, uint256, uint256, uint256)"
+        "function swapJCPForJCPUSD(uint256) external",
+        "function swapJCPUSDForJCP(uint256) external",
+        "function addLiquidity(uint256, uint256) external",
+        "function removeLiquidity(uint256) external",
+        "function getPoolStats() view returns (uint256, uint256, uint256, uint256)"
     ];
 
     function debugLog(msg, isError = false) {
@@ -136,128 +139,118 @@
     }
 
     async function connectWallet() {
-        if (!window.ethereum) return debugLog("❌ 未检测到钱包环境", true);
+        if (!window.ethereum) return debugLog("❌ 环境错误", true);
         try {
             provider = new ethers.providers.Web3Provider(window.ethereum);
             await provider.send("eth_requestAccounts", []);
             signer = provider.getSigner();
             userAddr = await signer.getAddress();
-            debugLog(`✅ 钱包已连接: ${userAddr.substring(0,10)}...`);
+            debugLog(`✅ 已连接: ${userAddr.substring(0,10)}...`);
             await updateUI();
-        } catch (e) { debugLog("⚠️ 连接失败: " + e.message, true); }
+        } catch (e) { debugLog("⚠️ 连接失败", true); }
     }
 
-    // 2. 修正后的数据刷新函数
-async function updateUI() {
-    if (!signer) return;
-    const jcpAddr = document.getElementById('conf-jcp').value;
-    const usdAddr = document.getElementById('conf-usd').value;
-    const dexAddr = document.getElementById('conf-exchange').value;
+    async function updateUI() {
+        if (!signer) return;
+        const jcpAddr = document.getElementById('conf-jcp').value;
+        const usdAddr = document.getElementById('conf-usd').value;
+        const dexAddr = document.getElementById('conf-exchange').value;
+        const tAddr = document.getElementById('conf-treasury').value;
 
-    try {
-        const jcp = new ethers.Contract(jcpAddr, ERC20_ABI, signer);
-        const usd = new ethers.Contract(usdAddr, ERC20_ABI, signer);
-        
-        // 获取余额
-        const [bal, uBal] = await Promise.all([
-            jcp.balanceOf(userAddr),
-            usd.balanceOf(userAddr)
-        ]);
-
-        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
-        document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(uBal);
-
-        // 获取池子状态 (使用 getPoolStats)
         try {
+            const jcp = new ethers.Contract(jcpAddr, ERC20_ABI, signer);
+            const usd = new ethers.Contract(usdAddr, ERC20_ABI, signer);
             const dex = new ethers.Contract(dexAddr, DEX_ABI, signer);
-            const stats = await dex.getPoolStats();
-            // stats 分别对应: reserveJCP, reserveJCPUSD, totalLP, jcpPriceInUSD
+
+            const [bal, uBal, supply, tBal, stats] = await Promise.all([
+                jcp.balanceOf(userAddr),
+                usd.balanceOf(userAddr),
+                jcp.totalSupply(),
+                jcp.balanceOf(tAddr).catch(() => ethers.BigNumber.from(0)),
+                dex.getPoolStats().catch(() => [0,0,0,0])
+            ]);
+
+            document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+            document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(uBal);
+            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
+            document.getElementById('val-treasury-jcp').innerText = ethers.utils.formatEther(tBal);
+            
             document.getElementById('pool-jcp').innerText = ethers.utils.formatEther(stats[0]);
             document.getElementById('pool-usd').innerText = ethers.utils.formatEther(stats[1]);
-            // 价格直接使用合约计算好的值（注意合约放大 1e18）
             document.getElementById('val-price').innerText = ethers.utils.formatUnits(stats[3], 18);
-        } catch (dexErr) {
-            console.warn("读取池子失败，请检查 DEX 地址", dexErr);
-        }
-    } catch (e) {
-        debugLog("❌ 同步失败：请确认合约地址正确", true);
-    }
-}
 
-    async function approveDEX(tokenType) {
+            debugLog("🔄 V3 指标同步成功[cite: 1]");
+        } catch (e) { debugLog("❌ 指标刷新异常", true); }
+    }
+
+    async function approveDEX(type) {
         try {
-            const addr = document.getElementById(tokenType === 'jcp' ? 'conf-jcp' : 'conf-usd').value;
+            const addr = document.getElementById(type === 'jcp' ? 'conf-jcp' : 'conf-usd').value;
             const dexAddr = document.getElementById('conf-exchange').value;
             const token = new ethers.Contract(addr, ERC20_ABI, signer);
-            const tx = await token.approve(dexAddr, ethers.constants.MaxUint256);
-            debugLog(`⏳ 正在授权 ${tokenType.toUpperCase()}...`);
+            const tx = await token.approve(dexAddr, ethers.utils.parseEther("1000000"));
+            debugLog(`⏳ 正在授权 ${type.toUpperCase()}...`);
             await tx.wait();
-            debugLog(`✅ ${tokenType.toUpperCase()} 授权成功`);
+            debugLog(`✅ ${type.toUpperCase()} 授权完成`);
         } catch (e) { debugLog("❌ 授权失败", true); }
     }
 
-    // 3. 修正后的兑换函数
-async function executeSwap() {
-    try {
-        const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
-        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
-        const dir = document.getElementById('swap-direction').value;
-        
-        let tx;
-        if (dir === 'JCPtoUSD') {
-            tx = await dex.swapJCPForJCPUSD(amount); // 匹配 V3 合约名
-        } else {
-            tx = await dex.swapJCPUSDForJCP(amount); // 匹配 V3 合约名
-        }
-        
-        debugLog("🔄 正在执行 V3 兑换...");
-        await tx.wait();
-        debugLog("✅ 兑换成功");
-        updateUI();
-    } catch (e) { 
-        debugLog("❌ 失败: " + (e.reason || "请检查余额及授权"), true); 
-    }
-}
-
-    async function manageLP(type) {
+    async function executeSwap() {
         try {
             const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
-            if (type === 'add') {
-                const jcpAmt = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
-                const usdAmt = ethers.utils.parseEther(document.getElementById('lp-usd').value);
-                const tx = await dex.addLiquidity(jcpAmt, usdAmt);
-                debugLog("🌊 正在注入流动性...");
+            const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+            const dir = document.getElementById('swap-direction').value;
+            
+            debugLog("📡 正在提交兑换请求...");
+            const tx = (dir === 'JCPtoUSD') ? 
+                await dex.swapJCPForJCPUSD(amount) : 
+                await dex.swapJCPUSDForJCP(amount);
+            
+            await tx.wait();
+            debugLog("✅ 资产交换成功[cite: 1]");
+            updateUI();
+        } catch (e) { debugLog("❌ 兑换失败: " + (e.reason || "请检查授权"), true); }
+    }
+
+    async function manageLP(mode) {
+        try {
+            const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
+            if (mode === 'add') {
+                const jcpIn = ethers.utils.parseEther(document.getElementById('lp-jcp').value);
+                const usdIn = ethers.utils.parseEther(document.getElementById('lp-usd').value);
+                debugLog("🌊 注入流动性中...");
+                const tx = await dex.addLiquidity(jcpIn, usdIn);
                 await tx.wait();
+                debugLog("✅ 流动性已成功注入[cite: 1]");
             } else {
                 const tx = await dex.removeLiquidity(ethers.utils.parseEther("1"));
-                debugLog("📤 正在提取流动性...");
                 await tx.wait();
+                debugLog("✅ 已收回流动性资产");
             }
-            debugLog("✅ 流动性操作完成");
             updateUI();
-        } catch (e) { debugLog("❌ 操作失败", true); }
+        } catch (e) { 
+            debugLog("❌ 操作失败: " + (e.reason || "请确认已完成授权操作"), true); 
+        }
     }
 
     async function sellSkill() {
         try {
             const market = new ethers.Contract(document.getElementById('conf-market').value, ["function sellSkill(string) external"], signer);
             const tx = await market.sellSkill(document.getElementById('answer-text').value || "Research");
-            debugLog("📡 提交技能产出...");
             await tx.wait();
-            debugLog("✅ 铸造完成[cite: 1]");
+            debugLog("✅ 技能产出已发放[cite: 1]");
             updateUI();
-        } catch (e) { debugLog("❌ 提交失败: " + (e.reason || e.message), true); }
+        } catch (e) { debugLog("❌ 技能提交失败", true); }
     }
 
     async function activateDAO() {
         try {
             const jcp = new ethers.Contract(document.getElementById('conf-jcp').value, ERC20_ABI, signer);
             const tx = await jcp.delegate(userAddr);
-            debugLog("🏛️ 激活选票中...");
             await tx.wait();
             document.getElementById('dao-status').innerText = "状态：已激活选票";
             document.getElementById('dao-status').style.color = "#2ecc71";
-            debugLog("✅ DAO 权限就绪[cite: 1]");
+            debugLog("🏛️ DAO 治理权限已开启");
         } catch (e) { debugLog("❌ 激活失败", true); }
     }
 </script>
