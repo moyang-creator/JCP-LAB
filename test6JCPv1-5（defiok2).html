@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JCP 宏观经济实验室 - 综合治理终端</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        :root { 
+            --sidebar-bg: #2c3e50; 
+            --card-bg: #ffffff; 
+            --main-bg: #f4f7f6; 
+            --accent: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); color: #333; }
+        
+        /* 侧边栏样式 */
+        .sidebar { width: 300px; background: #1a252f; color: #ecf0f1; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid #34495e; }
+        .sidebar h2 { font-size: 1.2rem; color: var(--accent); margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        .sidebar-section { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .sidebar-section h4 { font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; margin: 0 0 10px 0; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; }
+        .val { color: var(--success); font-family: 'Courier New', monospace; font-weight: bold; }
+        
+        /* 配置输入框 */
+        .config-group { margin-top: 10px; }
+        .config-label { font-size: 0.7rem; color: #7f8c8d; display: block; margin-bottom: 3px; }
+        .config-input { width: 100%; background: #2c3e50; border: 1px solid #455a64; color: #fff; padding: 5px; font-size: 10px; border-radius: 4px; margin-bottom: 8px; box-sizing: border-box; }
+        
+        /* 主面板布局 */
+        .main-panel { flex: 1; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto 1fr; gap: 20px; overflow-y: auto; }
+        
+        /* 卡片通用样式 */
+        .card { background: var(--card-bg); border-radius: 10px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid var(--accent); }
+        .card h3 { margin: 0 0 15px 0; font-size: 1rem; display: flex; align-items: center; gap: 8px; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .card-desc { font-size: 0.75rem; color: #7f8c8d; margin-bottom: 15px; }
+        
+        /* 输入控件 */
+        .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        input, select, textarea { flex: 1; border: 1px solid #dcdfe6; border-radius: 5px; padding: 8px; font-size: 0.85rem; outline: none; }
+        input:focus { border-color: var(--accent); }
+        
+        /* 按钮 */
+        .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.3s; }
+        .btn-primary { background: var(--accent); color: white; width: 100%; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: #95a5a6; color: white; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* DAO 特殊布局 */
+        .dao-card { grid-column: span 2; border-top-color: #9b59b6; }
+        .dao-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        /* 控制台 */
+        #console { grid-column: span 2; background: #1c2022; color: #a9b7c6; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px; height: 150px; overflow-y: auto; border-left: 5px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📊 经济系统观测站</h2>
+    
+    <div class="sidebar-section">
+        <h4>👤 个人账户</h4>
+        <div class="data-row"><span>我的 JCP:</span> <span id="val-my-jcp" class="val">0.00</span></div>
+        <div class="data-row"><span>我的 USD:</span> <span id="val-my-usd" class="val">0.00</span></div>
+    </div>
+
+    <div class="sidebar-section">
+        <h4>🏛️ 宏观/政策状态</h4>
+        <div class="data-row"><span>劳动税率:</span> <span id="val-tax-labor" class="val">0.0%</span></div>
+        <div class="data-row"><span>资本税率:</span> <span id="val-tax-capital" class="val">0.0%</span></div>
+        <div class="data-row"><span>JCP 总供应:</span> <span id="val-total-supply" class="val">0</span></div>
+    </div>
+
+    <div class="sidebar-section" style="border-left: 4px solid var(--success);">
+        <h4>🌊 DEX 流动性池 (实时)</h4>
+        <div class="data-row"><span>池内 JCP:</span> <span id="val-pool-jcp" class="val">0.00</span></div>
+        <div class="data-row"><span>池内 USD:</span> <span id="val-pool-usd" class="val">0.00</span></div>
+        <div class="data-row"><span>现货汇率:</span> <span id="val-price" class="val">0.00</span> <small>USD/JCP</small></div>
+    </div>
+
+    <div class="sidebar-section">
+        <h4>⚙️ 核心合约配置 (6)</h4>
+        <div class="config-group">
+            <span class="config-label">1. JCP 代币合约:</span>
+            <input type="text" id="addr-jcp" class="config-input" value="0xb1b96f98cF89e7621dCc36e06E09457DAF28E8CB">
+            <span class="config-label">2. USD 代币合约:</span>
+            <input type="text" id="addr-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
+            <span class="config-label">3. DEX 交易合约:</span>
+            <input type="text" id="addr-dex" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
+            <span class="config-label">4. DAO 治理合约:</span>
+            <input type="text" id="addr-dao" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
+            <span class="config-label">5. 技能市场/国库:</span>
+            <input type="text" id="addr-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
+            <span class="config-label">6. JCPTreasury 合约:</span>
+            <input type="text" id="addr-treasury" class="config-input" value="0xf4a30daf8860FF135fC2D81F5cC54bac88f8BE3c">
+        </div>
+        <button onclick="initSystem()" class="btn btn-primary" style="margin-top:10px;">🔄 启动连接与初始化</button>
+    </div>
+</div>
+
+<div class="main-panel">
+    <!-- 技能售卖 -->
+    <div class="card">
+        <h3>⚒️ 技能售卖终端</h3>
+        <p class="card-desc">提交见解获取 JCP，系统自动扣除劳动税。</p>
+        <textarea id="skill-input" rows="3" placeholder="输入您的研究成果或代码片段..."></textarea>
+        <button onclick="handleSellSkill()" class="btn btn-primary" style="margin-top:10px;">确认提交成果</button>
+    </div>
+
+    <!-- 宏观参数修改 -->
+    <div class="card">
+        <h3>🏛️ 宏观参数控制台</h3>
+        <p class="card-desc">直接修改税率 BP（100=1%）。若授权 DAO，此处将锁定。</p>
+        <div class="input-row">
+            <input type="number" id="input-tax-labor" placeholder="劳动税率 (0-5000)">
+            <button onclick="updateTax('labor')" class="btn btn-outline">更新劳动税</button>
+        </div>
+        <div class="input-row">
+            <input type="number" id="input-tax-capital" placeholder="资本税率 (0-2000)">
+            <button onclick="updateTax('capital')" class="btn btn-outline">更新资本税</button>
+        </div>
+    </div>
+
+    <!-- Swap 交易 -->
+    <div class="card">
+        <h3>⚖️ 资产交易 (Swap)</h3>
+        <p class="card-desc">基于恒定乘积公式进行即时兑换。</p>
+        <div class="input-row">
+            <input type="number" id="swap-in-amount" placeholder="数量">
+            <select id="swap-type">
+                <option value="jcp2usd">JCP ➡️ USD</option>
+                <option value="usd2jcp">USD ➡️ JCP</option>
+            </select>
+        </div>
+        <div class="input-row">
+            <button onclick="handleApprove('jcp')" class="btn btn-outline">授权 JCP</button>
+            <button onclick="handleApprove('usd')" class="btn btn-outline">授权 USD</button>
+        </div>
+        <button onclick="handleSwap()" class="btn btn-success" style="width:100%;">立即执行兑换</button>
+    </div>
+
+    <!-- 流动性管理 -->
+    <div class="card">
+        <h3>🌊 流动性池管理</h3>
+        <p class="card-desc">注入双端资产以赚取交易手续费。</p>
+        <div class="input-row">
+            <input type="number" id="lp-jcp-amount" placeholder="JCP 数量">
+            <input type="number" id="lp-usd-amount" placeholder="USD 数量">
+        </div>
+        <button onclick="handleLiquidity('add')" class="btn btn-success" style="width:100%;">注入流动性</button>
+        <button onclick="handleLiquidity('remove')" class="btn btn-danger" style="width:100%; margin-top:10px;">提取流动性 (1 LP)</button>
+    </div>
+
+    <!-- DAO 治理 -->
+    <div class="card dao-card">
+        <h3>🗳️ DAO 链上治理中心</h3>
+        <div class="dao-grid">
+            <div class="dao-action">
+                <h4>📜 发起新提案</h4>
+                <select id="prop-type" style="width:100%; margin-bottom:10px;">
+                    <option value="1">1: 修改劳动税率</option>
+                    <option value="2">2: 修改资本税率</option>
+                    <option value="3">3: 更换国库地址</option>
+                    <option value="4">4: 发放国库补贴</option>
+                </select>
+                <div class="input-row">
+                    <input type="number" id="prop-value" placeholder="数值 (BP或金额)">
+                    <input type="text" id="prop-addr" placeholder="目标地址 (若需)">
+                </div>
+                <textarea id="prop-desc" rows="2" placeholder="提案理由..." style="width:100%; margin-bottom:10px;"></textarea>
+                <button onclick="handlePropose()" class="btn btn-primary">提交提案</button>
+                <button onclick="handleDelegate()" class="btn btn-outline" style="margin-top:5px; width:100%;">激活选票 (Delegate Self)</button>
+            </div>
+            <div class="dao-monitor" style="border-left: 1px solid #eee; padding-left: 20px;">
+                <h4>📊 看板 & 投票</h4>
+                <div class="input-row">
+                    <input type="number" id="search-id" placeholder="提案 ID">
+                    <button onclick="queryProposal()" class="btn btn-outline">查询</button>
+                </div>
+                <div id="proposal-info" style="font-size: 0.8rem; background: #f9f9f9; padding: 10px; border-radius: 5px; min-height: 80px; margin-bottom: 10px;">
+                    等待查询结果...
+                </div>
+                <div class="input-row">
+                    <button onclick="handleVote(true)" class="btn btn-success">赞成</button>
+                    <button onclick="handleVote(false)" class="btn btn-danger">反对</button>
+                    <button onclick="handleExecute()" class="btn btn-primary">执行</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 控制台 -->
+    <div id="console">> 系统待机，请点击初始化。</div>
+</div>
+
+<script>
+    let signer, userAddr;
+    let contracts = {};
+
+    // ABI 定义
+    const ABI_JCP = [
+        "function balanceOf(address) view returns (uint256)",
+        "function totalSupply() view returns (uint256)",
+        "function laborTaxRate() view returns (uint256)",
+        "function capitalTaxRate() view returns (uint256)",
+        "function setLaborTaxRate(uint256) external",
+        "function setCapitalTaxRate(uint256) external",
+        "function approve(address, uint256) returns (bool)",
+        "function delegate(address) external"
+    ];
+    const ABI_DEX = [
+        "function getPoolStats() view returns (uint256, uint256, uint256, uint256)",
+        "function swapJCPForJCPUSD(uint256) external",
+        "function swapJCPUSDForJCP(uint256) external",
+        "function addLiquidity(uint256, uint256) external",
+        "function removeLiquidity(uint256) external"
+    ];
+    const ABI_DAO = [
+        "function propose(uint8, uint256, address, string) external returns (uint256)",
+        "function vote(uint256, bool) external",
+        "function executeProposal(uint256) external",
+        "function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)",
+        "function proposalCount() view returns (uint256)"
+    ];
+    const ABI_MARKET = ["function sellSkill(string) external"];
+
+    function log(msg, isError = false) {
+        const div = document.getElementById('console');
+        const time = new Date().toLocaleTimeString();
+        div.innerHTML += `<div style="color: ${isError ? '#ff6b6b' : '#a9b7c6'}">[${time}] ${msg}</div>`;
+        div.scrollTop = div.scrollHeight;
+    }
+
+    async function initSystem() {
+        if (!window.ethereum) return log("未检测到小狐狸钱包", true);
+        try {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+            userAddr = await signer.getAddress();
+            
+            // 初始化合约实例
+            contracts.jcp = new ethers.Contract(document.getElementById('addr-jcp').value, ABI_JCP, signer);
+            contracts.usd = new ethers.Contract(document.getElementById('addr-usd').value, ABI_JCP, signer);
+            contracts.dex = new ethers.Contract(document.getElementById('addr-dex').value, ABI_DEX, signer);
+            contracts.dao = new ethers.Contract(document.getElementById('addr-dao').value, ABI_DAO, signer);
+            contracts.market = new ethers.Contract(document.getElementById('addr-market').value, ABI_MARKET, signer);
+
+            log(`钱包已连接: ${userAddr.substring(0, 10)}...`);
+            await refreshData();
+        } catch (e) { log("连接异常: " + e.message, true); }
+    }
+
+    async function refreshData() {
+        try {
+            const [myJCP, myUSD, laborT, capitalT, totalS, pool] = await Promise.all([
+                contracts.jcp.balanceOf(userAddr),
+                contracts.usd.balanceOf(userAddr),
+                contracts.jcp.laborTaxRate(),
+                contracts.jcp.capitalTaxRate(),
+                contracts.jcp.totalSupply(),
+                contracts.dex.getPoolStats()
+            ]);
+
+            document.getElementById('val-my-jcp').innerText = ethers.utils.formatEther(myJCP);
+            document.getElementById('val-my-usd').innerText = ethers.utils.formatEther(myUSD);
+            document.getElementById('val-tax-labor').innerText = (laborT / 100).toFixed(1) + "%";
+            document.getElementById('val-tax-capital').innerText = (capitalT / 100).toFixed(1) + "%";
+            document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(totalS));
+            
+            document.getElementById('val-pool-jcp').innerText = ethers.utils.formatEther(pool[0]);
+            document.getElementById('val-pool-usd').innerText = ethers.utils.formatEther(pool[1]);
+            document.getElementById('val-price').innerText = ethers.utils.formatUnits(pool[3], 18);
+            
+            log("数据同步成功");
+        } catch (e) { log("刷新失败: " + e.message, true); }
+    }
+
+    // --- 功能函数 ---
+
+    async function handleSellSkill() {
+        try {
+            const txt = document.getElementById('skill-input').value;
+            const tx = await contracts.market.sellSkill(txt || "Academic Labor");
+            await tx.wait();
+            log("技能售卖成功！JCP 已入账（已扣劳动税）");
+            refreshData();
+        } catch (e) { log("售卖失败", true); }
+    }
+
+    async function updateTax(type) {
+        try {
+            const val = document.getElementById(`input-tax-${type}`).value;
+            const tx = (type === 'labor') ? 
+                await contracts.jcp.setLaborTaxRate(val) : 
+                await contracts.jcp.setCapitalTaxRate(val);
+            log("正在修改税率参数...");
+            await tx.wait();
+            log("税率修改成功！");
+            refreshData();
+        } catch (e) { log("权限不足或数值错误", true); }
+    }
+
+    async function handleApprove(token) {
+        try {
+            const tx = await contracts[token].approve(contracts.dex.address, ethers.constants.MaxUint256);
+            log(`正在授权 ${token.toUpperCase()}...`);
+            await tx.wait();
+            log("授权成功");
+        } catch (e) { log("授权异常", true); }
+    }
+
+    async function handleSwap() {
+        try {
+            const amt = ethers.utils.parseEther(document.getElementById('swap-in-amount').value);
+            const type = document.getElementById('swap-type').value;
+            const tx = (type === 'jcp2usd') ? 
+                await contracts.dex.swapJCPForJCPUSD(amt) : 
+                await contracts.dex.swapJCPUSDForJCP(amt);
+            await tx.wait();
+            log("兑换成功！");
+            refreshData();
+        } catch (e) { log("兑换失败", true); }
+    }
+
+    async function handleLiquidity(mode) {
+        try {
+            if(mode === 'add') {
+                const j = ethers.utils.parseEther(document.getElementById('lp-jcp-amount').value);
+                const u = ethers.utils.parseEther(document.getElementById('lp-usd-amount').value);
+                await (await contracts.dex.addLiquidity(j, u)).wait();
+                log("流动性注入成功");
+            } else {
+                await (await contracts.dex.removeLiquidity(ethers.utils.parseEther("1"))).wait();
+                log("已提取 1 单位 LP");
+            }
+            refreshData();
+        } catch (e) { log("流动性操作失败", true); }
+    }
+
+    // --- DAO 治理函数 ---
+
+    async function handleDelegate() {
+        try {
+            await (await contracts.jcp.delegate(userAddr)).wait();
+            log("选票激活成功（已委托给自己）");
+        } catch (e) { log("委托失败", true); }
+    }
+
+    async function handlePropose() {
+        try {
+            const type = document.getElementById('prop-type').value;
+            const val = document.getElementById('prop-value').value;
+            const addr = document.getElementById('prop-addr').value || "0x0000000000000000000000000000000000000000";
+            const desc = document.getElementById('prop-desc').value;
+            const tx = await contracts.dao.propose(type, val, addr, desc);
+            const receipt = await tx.wait();
+            log(`提案已提交！请关注 ID`);
+            refreshData();
+        } catch (e) { log("发起提案失败", true); }
+    }
+
+    async function queryProposal() {
+        try {
+            const id = document.getElementById('search-id').value;
+            const data = await contracts.dao.checkProposalDashboard(id);
+            document.getElementById('proposal-info').innerHTML = `
+                <b>类型:</b> ${data[0]}<br>
+                <b>状态:</b> ${data[1]}<br>
+                <b>赞成:</b> ${ethers.utils.formatEther(data[2])}<br>
+                <b>反对:</b> ${ethers.utils.formatEther(data[3])}<br>
+                <b>剩余区块:</b> ${data[4]}
+            `;
+        } catch (e) { log("查询 ID 不存在", true); }
+    }
+
+    async function handleVote(support) {
+        try {
+            const id = document.getElementById('search-id').value;
+            await (await contracts.dao.vote(id, support)).wait();
+            log("投票已成功提交");
+            queryProposal();
+        } catch (e) { log("投票失败", true); }
+    }
+
+    async function handleExecute() {
+        try {
+            const id = document.getElementById('search-id').value;
+            await (await contracts.dao.executeProposal(id)).wait();
+            log("提案已执行！政策生效");
+            refreshData();
+        } catch (e) { log("执行失败：可能未过公示期或票数不足", true); }
+    }
+</script>
+</body>
+</html>
