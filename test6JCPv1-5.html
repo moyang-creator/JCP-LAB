@@ -132,10 +132,11 @@
         <div class="data-row"><span>劳动税率:</span> <span id="val-tax-labor" class="val">0.0%</span></div>
         <div class="data-row"><span>资本税率:</span> <span id="val-tax-capital" class="val">0.0%</span></div>
         <div class="data-row"><span>JCP 总供应:</span> <span id="val-total-supply" class="val">0</span></div>
-        <div style="border-top:1px solid rgba(255,255,255,0.1); margin:8px 0; padding-top:8px;"></div>
-        <div class="data-row"><span>国库金额 (USD):</span> <span id="val-treasury-usd" class="val">0.00</span></div>
         <div class="data-row"><span>USD 发行总量:</span> <span id="val-total-usd" class="val">0.00</span></div>
-    </div>
+        <div style="border-top:1px solid rgba(255,255,255,0.1); margin:8px 0; padding-top:8px;"></div>        
+        <div class="data-row"><span>国库储备 (JCP):</span> <span id="val-treasury-jcp" class="val" style="color:var(--warning);">0.00</span></div>
+        <div class="data-row"><span>国库储备 (USD):</span> <span id="val-treasury-usd" class="val">0.00</span></div>
+    </div>    
 
     <div class="sidebar-section" style="border-left: 4px solid var(--success);">
         <h4>🌊 DEX 流动性池</h4>
@@ -317,33 +318,58 @@
     }
 
     async function refreshData() {
-        try {
-            const treasuryAddr = document.getElementById('addr-treasury').value;
-            const [myJCP, myUSD, laborT, capitalT, totalJCP, totalUSD, pool, treasuryBal] = await Promise.all([
-                contracts.jcp.balanceOf(userAddr),
-                contracts.usd.balanceOf(userAddr),
-                contracts.jcp.laborTaxRate(),
-                contracts.jcp.capitalTaxRate(),
-                contracts.jcp.totalSupply(),
-                contracts.usd.totalSupply(),
-                contracts.dex.getPoolStats(),
-                contracts.usd.balanceOf(treasuryAddr)
-            ]);
+    try {
+        const treasuryAddr = document.getElementById('addr-treasury').value;
+        
+        // 并发查询：确保个人余额和国库余额各归各位
+        const [
+            myJCP,        // 1. 查询当前连接钱包(userAddr)的 JCP
+            myUSD,        // 2. 查询当前连接钱包(userAddr)的 USD
+            laborT,       // 3. JCP 合约内的劳动税率
+            capitalT,     // 4. JCP 合约内的资本税率
+            totalJCP,     // 5. JCP 总发行量
+            totalUSD,     // 6. USD 总发行量
+            pool,         // 7. DEX 池数据
+            treasuryJCP,  // 8. 明确查询：国库地址持有的 JCP [修正项]
+            treasuryUSD   // 9. 明确查询：国库地址持有的 USD [修正项]
+        ] = await Promise.all([
+            contracts.jcp.balanceOf(userAddr),
+            contracts.usd.balanceOf(userAddr),
+            contracts.jcp.laborTaxRate(),
+            contracts.jcp.capitalTaxRate(),
+            contracts.jcp.totalSupply(),
+            contracts.usd.totalSupply(),
+            contracts.dex.getPoolStats(),
+            contracts.jcp.balanceOf(treasuryAddr), // 修正：国库 JCP
+            contracts.usd.balanceOf(treasuryAddr)  // 修正：国库 USD
+        ]);
 
-            document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJCP)).toFixed(2);
-            document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(myUSD)).toFixed(4);
-            document.getElementById('val-tax-labor').innerText = (laborT / 100).toFixed(1) + "%";
-            document.getElementById('val-tax-capital').innerText = (capitalT / 100).toFixed(1) + "%";
-            document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(totalJCP));
-            document.getElementById('val-treasury-usd').innerText = parseFloat(ethers.utils.formatEther(treasuryBal)).toFixed(2);
-            document.getElementById('val-total-usd').innerText = parseFloat(ethers.utils.formatEther(totalUSD)).toFixed(2);
-            document.getElementById('val-pool-jcp').innerText = parseFloat(ethers.utils.formatEther(pool[0])).toFixed(2);
-            document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
-            document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
-            
-            log("宏观监控数据更新成功");
-        } catch (e) { log(parseError(e, "数据同步异常"), true); }
-    }
+        // --- 更新 UI ---
+        
+        // 个人账户区
+        document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJCP)).toFixed(2);
+        document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(myUSD)).toFixed(4);
+
+        // 宏观/政策区
+        document.getElementById('val-tax-labor').innerText = (laborT / 100).toFixed(1) + "%";
+        document.getElementById('val-tax-capital').innerText = (capitalT / 100).toFixed(1) + "%";
+        document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(totalJCP));
+        
+        // 国库区 [修正：增加国库 JCP 的显示支持]
+        if(document.getElementById('val-treasury-jcp')) {
+            document.getElementById('val-treasury-jcp').innerText = parseFloat(ethers.utils.formatEther(treasuryJCP)).toFixed(2);
+        }
+        document.getElementById('val-treasury-usd').innerText = parseFloat(ethers.utils.formatEther(treasuryUSD)).toFixed(2);
+        document.getElementById('val-total-usd').innerText = parseFloat(ethers.utils.formatEther(totalUSD)).toFixed(2);
+
+        // DEX 池区
+        document.getElementById('val-pool-jcp').innerText = parseFloat(ethers.utils.formatEther(pool[0])).toFixed(2);
+        document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
+        document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
+        
+        log("数据已校准：个人与国库账户已区分。");
+    } catch (e) { log(parseError(e, "数据同步异常"), true); }
+}
 
     // 业务函数[cite: 1, 2]
     async function handleSellSkill() {
