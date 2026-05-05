@@ -120,7 +120,14 @@
 <script>
     let provider, signer, userAddr;
     const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function totalSupply() view returns (uint256)", "function approve(address, uint256) returns (bool)", "function delegate(address) external"];
-    const DEX_ABI = ["function swapJCPtoUSD(uint256) external", "function swapUSDtoJCP(uint256) external", "function addLiquidity(uint256, uint256) external", "function removeLiquidity(uint256) external", "function poolJCP() view returns (uint256)", "function poolUSD() view returns (uint256)"];
+     // 1. 更新 ABI 以匹配您的 V3 合约
+    const DEX_ABI = [
+    "function swapJCPForJCPUSD(uint256) external",
+    "function swapJCPUSDForJCP(uint256) external",
+    "function addLiquidity(uint256, uint256) external",
+    "function removeLiquidity(uint256) external",
+    "function getPoolStats() view returns (uint256, uint256, uint256, uint256)"
+    ];
 
     function debugLog(msg, isError = false) {
         const el = document.getElementById('debug-console');
@@ -140,48 +147,42 @@
         } catch (e) { debugLog("⚠️ 连接失败: " + e.message, true); }
     }
 
-    async function updateUI() {
-        if (!signer) return;
-        const jcpAddr = document.getElementById('conf-jcp').value;
-        const usdAddr = document.getElementById('conf-usd').value;
-        const dexAddr = document.getElementById('conf-exchange').value;
-        const treasuryAddr = document.getElementById('conf-treasury').value;
+    // 2. 修正后的数据刷新函数
+async function updateUI() {
+    if (!signer) return;
+    const jcpAddr = document.getElementById('conf-jcp').value;
+    const usdAddr = document.getElementById('conf-usd').value;
+    const dexAddr = document.getElementById('conf-exchange').value;
 
+    try {
+        const jcp = new ethers.Contract(jcpAddr, ERC20_ABI, signer);
+        const usd = new ethers.Contract(usdAddr, ERC20_ABI, signer);
+        
+        // 获取余额
+        const [bal, uBal] = await Promise.all([
+            jcp.balanceOf(userAddr),
+            usd.balanceOf(userAddr)
+        ]);
+
+        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+        document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(uBal);
+
+        // 获取池子状态 (使用 getPoolStats)
         try {
-            const jcp = new ethers.Contract(jcpAddr, ERC20_ABI, signer);
-            const usd = new ethers.Contract(usdAddr, ERC20_ABI, signer);
-            
-            // 基础信息同步
-            const [bal, uBal, supply, tBal] = await Promise.all([
-                jcp.balanceOf(userAddr),
-                usd.balanceOf(userAddr),
-                jcp.totalSupply(),
-                jcp.balanceOf(treasuryAddr).catch(() => ethers.BigNumber.from(0))
-            ]);
-
-            document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
-            document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(uBal);
-            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
-            document.getElementById('val-treasury-jcp').innerText = ethers.utils.formatEther(tBal);
-
-            // 独立同步池子信息，防止池子未部署导致整个失败
-            try {
-                const dex = new ethers.Contract(dexAddr, DEX_ABI, signer);
-                const pJCP = await dex.poolJCP();
-                const pUSD = await dex.poolUSD();
-                document.getElementById('pool-jcp').innerText = ethers.utils.formatEther(pJCP);
-                document.getElementById('pool-usd').innerText = ethers.utils.formatEther(pUSD);
-                const price = pJCP.gt(0) ? parseFloat(ethers.utils.formatEther(pUSD)) / parseFloat(ethers.utils.formatEther(pJCP)) : 0;
-                document.getElementById('val-price').innerText = price.toFixed(4);
-            } catch (dexErr) {
-                console.warn("DEX 数据读取跳过:", dexErr);
-            }
-
-            debugLog("🔄 数据已刷新[cite: 1]");
-        } catch (e) {
-            debugLog("❌ 数据同步失败：请检查 JCP/USD 地址是否正确且处于对应网络", true);
+            const dex = new ethers.Contract(dexAddr, DEX_ABI, signer);
+            const stats = await dex.getPoolStats();
+            // stats 分别对应: reserveJCP, reserveJCPUSD, totalLP, jcpPriceInUSD
+            document.getElementById('pool-jcp').innerText = ethers.utils.formatEther(stats[0]);
+            document.getElementById('pool-usd').innerText = ethers.utils.formatEther(stats[1]);
+            // 价格直接使用合约计算好的值（注意合约放大 1e18）
+            document.getElementById('val-price').innerText = ethers.utils.formatUnits(stats[3], 18);
+        } catch (dexErr) {
+            console.warn("读取池子失败，请检查 DEX 地址", dexErr);
         }
+    } catch (e) {
+        debugLog("❌ 同步失败：请确认合约地址正确", true);
     }
+}
 
     async function approveDEX(tokenType) {
         try {
@@ -195,18 +196,28 @@
         } catch (e) { debugLog("❌ 授权失败", true); }
     }
 
-    async function executeSwap() {
-        try {
-            const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
-            const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
-            const dir = document.getElementById('swap-direction').value;
-            const tx = (dir === 'JCPtoUSD') ? await dex.swapJCPtoUSD(amount) : await dex.swapUSDtoJCP(amount);
-            debugLog("🔄 正在交换资产...");
-            await tx.wait();
-            debugLog("✅ 交换完成");
-            updateUI();
-        } catch (e) { debugLog("❌ 交换失败: " + (e.reason || "请检查余额/授权"), true); }
+    // 3. 修正后的兑换函数
+async function executeSwap() {
+    try {
+        const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
+        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+        const dir = document.getElementById('swap-direction').value;
+        
+        let tx;
+        if (dir === 'JCPtoUSD') {
+            tx = await dex.swapJCPForJCPUSD(amount); // 匹配 V3 合约名
+        } else {
+            tx = await dex.swapJCPUSDForJCP(amount); // 匹配 V3 合约名
+        }
+        
+        debugLog("🔄 正在执行 V3 兑换...");
+        await tx.wait();
+        debugLog("✅ 兑换成功");
+        updateUI();
+    } catch (e) { 
+        debugLog("❌ 失败: " + (e.reason || "请检查余额及授权"), true); 
     }
+}
 
     async function manageLP(type) {
         try {

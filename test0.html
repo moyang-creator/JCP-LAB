@@ -1,210 +1,68 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JCP 宏观经济仪表盘</title>
-    <script src="./js/ethers.umd.min.js" type="application/javascript"></script>
-    <style>
-        :root {
-            --sidebar-bg: #1e252b; --main-bg: #f0f2f5; --card-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            --accent-blue: #3498db; --accent-yellow: #f1c40f; --text-gray: #95a5a6;
-        }
+// 1. 更新 ABI 以匹配您的 V3 合约
+const DEX_ABI = [
+    "function swapJCPForJCPUSD(uint256) external",
+    "function swapJCPUSDForJCP(uint256) external",
+    "function addLiquidity(uint256, uint256) external",
+    "function removeLiquidity(uint256) external",
+    "function getPoolStats() view returns (uint256, uint256, uint256, uint256)"
+];
 
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
+// 2. 修正后的数据刷新函数
+async function updateUI() {
+    if (!signer) return;
+    const jcpAddr = document.getElementById('conf-jcp').value;
+    const usdAddr = document.getElementById('conf-usd').value;
+    const dexAddr = document.getElementById('conf-exchange').value;
 
-        /* 侧边栏样式 */
-        .sidebar { width: 280px; background: var(--sidebar-bg); color: white; padding: 20px; display: flex; flex-direction: column; }
-        .sidebar h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; margin-bottom: 25px; }
-        .sidebar-section { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-        .sidebar-section h4 { color: var(--text-gray); font-size: 0.75rem; margin: 0 0 10px 0; font-weight: normal; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+    try {
+        const jcp = new ethers.Contract(jcpAddr, ERC20_ABI, signer);
+        const usd = new ethers.Contract(usdAddr, ERC20_ABI, signer);
         
-        /* 地址配置区域 - 扩展至 6 个 */
-        .config-label { font-size: 0.7rem; color: #7f8c8d; display: block; margin-top: 6px; }
-        .config-input { width: 100%; background: #2c3e50; border: 1px solid #34495e; color: #bdc3c7; padding: 5px; font-size: 10px; border-radius: 4px; margin-bottom: 4px; box-sizing: border-box; }
-        .btn-connect { background: #3498db; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 0.85rem; margin-top: 10px; }
+        // 获取余额
+        const [bal, uBal] = await Promise.all([
+            jcp.balanceOf(userAddr),
+            usd.balanceOf(userAddr)
+        ]);
 
-        /* 主面板布局 */
-        .main-content { flex: 1; display: flex; flex-direction: column; padding: 25px; overflow-y: auto; gap: 20px; }
-        .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: var(--card-shadow); position: relative; }
-        .card h3 { margin: 0 0 15px 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
-        .card p.desc { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 15px; }
-        
-        /* 交互组件 */
-        textarea, input[type="number"], input[type="text"] { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .btn-blue { background: #3498db; color: white; }
-        .btn-yellow { background: var(--accent-yellow); color: #2c3e50; }
-        .btn-gray { background: #95a5a6; color: white; }
+        document.getElementById('val-balance').innerText = ethers.utils.formatEther(bal);
+        document.getElementById('val-usd-balance').innerText = ethers.utils.formatEther(uBal);
 
-        /* 底部调试栏 */
-        #debug-console { background: #1e252b; color: #abb2bf; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px; height: 180px; overflow-y: auto; border: 1px solid #34495e; }
-    </style>
-</head>
-<body>
-
-<div class="sidebar">
-    <h2>📊 宏观经济仪表盘</h2>
-    
-    <div class="sidebar-section">
-        <h4>个人与总量</h4>
-        <div class="data-row"><span>我的余额:</span> <span id="val-balance">0.00</span> <span>JCP</span></div>
-        <div class="data-row"><span>货币总量:</span> <span id="val-supply" style="font-weight: bold;">0</span></div>
-    </div>
-
-    <div class="sidebar-section">
-        <h4>政策指数</h4>
-        <div class="data-row"><span>国库储备:</span> <span>0</span></div>
-        <div class="data-row"><span>劳动/资本税:</span> <span>0 % / 0 %</span></div>
-    </div>
-
-    <div class="sidebar-section">
-        <h4>市场汇率</h4>
-        <div class="data-row"><span>1 JCP =</span> <span>0.00</span> <span>POW</span></div>
-    </div>
-
-    <div class="sidebar-section" style="flex:1; overflow-y:auto;">
-        <h4 style="display:flex; align-items:center; gap:5px;">⚙️ 实验地址配置</h4>
-        <span class="config-label">JCP 代币:</span>
-        <input type="text" id="conf-jcp" class="config-input" value="0xd5A06875A71c3ee05f76E7b4AA612215F171B5D6">
-        
-        <span class="config-label">JCP USD 代币:</span>
-        <input type="text" id="conf-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
-
-        <span class="config-label">技能市场 (V2):</span>
-        <input type="text" id="conf-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
-
-        <span class="config-label">JCP 国库:</span>
-        <input type="text" id="conf-treasury" class="config-input" value="0xA10794996E67382847082932C57cd00103e5dAA4">
-
-        <span class="config-label">治理中心 (DAO):</span>
-        <input type="text" id="conf-governor" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
-
-        <span class="config-label">DEX 交易所 (V4):</span>
-        <input type="text" id="conf-exchange" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
-        
-        <button onclick="connectWallet()" class="btn-connect">🌐 连接/刷新</button>
-    </div>
-</div>
-
-<div class="main-content">
-    <div class="card-grid">
-        <!-- 技能售卖 -->
-        <div class="card">
-            <h3>🛠️ 技能售卖终端</h3>
-            <p class="desc">提交知识产出以 Mint 代币。请注意，系统将根据当前政策自动扣除劳动税。</p>
-            <textarea id="answer-text" rows="3" placeholder="输入见解..."></textarea>
-            <button onclick="sellSkill()" class="btn-action btn-blue">确认提交</button>
-        </div>
-
-        <!-- 金融资产交换 -->
-        <div class="card">
-            <h3>⚖️ 金融资产交换</h3>
-            <p class="desc">JCP ↔ POW 跨期资产交换[cite: 1]。利用市场流动性调整个人资产组合。</p>
-            <input type="number" id="swap-amount" placeholder="输入 JCP 数量">
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button onclick="approve()" class="btn-action btn-gray" style="flex:1;">1. 授权</button>
-                <button onclick="swap()" class="btn-action btn-gray" style="flex:1;">2. 兑换</button>
-            </div>
-        </div>
-
-        <!-- DAO -->
-        <div class="card">
-            <h3>🏛️ 分散化自治治理中心 (DAO)</h3>
-            <p class="desc">V5 阶段：激活选票后，通过提案表决决定宏观政策。目前状态: <span style="color:red">未激活</span></p>
-            <button onclick="delegate()" class="btn-action btn-gray" style="margin-top:25px;">激活选票 (Delegate)</button>
-            <p style="font-size:0.75rem; color:#95a5a6; margin-top:10px;">等待链上提案...</p>
-        </div>
-
-        <!-- Admin -->
-        <div class="card" style="border-top: 4px solid var(--accent-yellow);">
-            <h3>🕹️ 政策干预面板 (Admin)</h3>
-            <p class="desc">V3-V4: 管理员通过指令调控税率。V5: 此处调用将被“算法规则”拦截。</p>
-            <div style="display:flex; gap:15px;">
-                <div style="flex:1"><label style="font-size:0.8rem">劳动税 (%)</label><input type="number" value="0"></div>
-                <div style="flex:1"><label style="font-size:0.8rem">资本税 (%)</label><input type="number" value="0"></div>
-            </div>
-            <button class="btn-action btn-yellow">执行指令干预</button>
-        </div>
-    </div>
-
-    <!-- 底部调试输出 -->
-    <div id="debug-console">> 系统就绪。请确认侧边栏地址后点击“连接/刷新”。</div>
-</div>
-
-<script>
-    let provider, signer, contracts = {};
-
-    function debugLog(msg, isError = false) {
-        const el = document.getElementById('debug-console');
-        const timestamp = new Date().toLocaleTimeString();
-        const color = isError ? "#e06c75" : "#abb2bf";
-        el.innerHTML += `<div style="color: ${color}">[${timestamp}] > ${msg}</div>`;
-        el.scrollTop = el.scrollHeight;
-    }
-
-    async function connectWallet() {
-        // 1. 检查环境
-        if (typeof window.ethereum === 'undefined') {
-            debugLog("❌ 未检测到钱包环境：请确认已安装 MetaMask 插件并已解锁。", true);
-            return;
-        }
-
+        // 获取池子状态 (使用 getPoolStats)
         try {
-            // 2. 初始化 Provider 和 Signer
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            
-            // 3. 请求用户授权连接
-            debugLog("📡 正在请求钱包连接授权...");
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
-            const userAddr = await signer.getAddress();
-            
-            debugLog(`✅ 钱包已连接: ${userAddr.substring(0, 6)}...${userAddr.substring(38)}`);
-
-            // 4. 根据侧边栏配置初始化合约对象
-            const commonABI = [
-                "function balanceOf(address) view returns (uint256)",
-                "function totalSupply() view returns (uint256)"
-            ];
-
-            contracts.jcp = new ethers.Contract(document.getElementById('conf-jcp').value, commonABI, signer);
-            
-            // 5. 更新 UI 数据
-            await updateUI();
-            
-        } catch (error) {
-            console.error(error);
-            if (error.code === 4001) {
-                debugLog("❌ 连接请求被拒绝。", true);
-            } else {
-                debugLog("❌ 连接异常: " + error.message, true);
-            }
+            const dex = new ethers.Contract(dexAddr, DEX_ABI, signer);
+            const stats = await dex.getPoolStats();
+            // stats 分别对应: reserveJCP, reserveJCPUSD, totalLP, jcpPriceInUSD
+            document.getElementById('pool-jcp').innerText = ethers.utils.formatEther(stats[0]);
+            document.getElementById('pool-usd').innerText = ethers.utils.formatEther(stats[1]);
+            // 价格直接使用合约计算好的值（注意合约放大 1e18）
+            document.getElementById('val-price').innerText = ethers.utils.formatUnits(stats[3], 18);
+        } catch (dexErr) {
+            console.warn("读取池子失败，请检查 DEX 地址", dexErr);
         }
+    } catch (e) {
+        debugLog("❌ 同步失败：请确认合约地址正确", true);
     }
+}
 
-    async function updateUI() {
-        try {
-            const addr = await signer.getAddress();
-            const balance = await contracts.jcp.balanceOf(addr);
-            const supply = await contracts.jcp.totalSupply();
-
-            document.getElementById('val-balance').innerText = ethers.utils.formatEther(balance);
-            document.getElementById('val-supply').innerText = ethers.utils.formatUnits(supply, 18);
-            
-            debugLog("🔄 链上状态已同步。");
-        } catch (e) {
-            debugLog("⚠️ 数据同步失败，请检查合约地址是否匹配当前网络。", true);
+// 3. 修正后的兑换函数
+async function executeSwap() {
+    try {
+        const dex = new ethers.Contract(document.getElementById('conf-exchange').value, DEX_ABI, signer);
+        const amount = ethers.utils.parseEther(document.getElementById('swap-amount').value);
+        const dir = document.getElementById('swap-direction').value;
+        
+        let tx;
+        if (dir === 'JCPtoUSD') {
+            tx = await dex.swapJCPForJCPUSD(amount); // 匹配 V3 合约名
+        } else {
+            tx = await dex.swapJCPUSDForJCP(amount); // 匹配 V3 合约名
         }
+        
+        debugLog("🔄 正在执行 V3 兑换...");
+        await tx.wait();
+        debugLog("✅ 兑换成功");
+        updateUI();
+    } catch (e) { 
+        debugLog("❌ 失败: " + (e.reason || "请检查余额及授权"), true); 
     }
-
-    // 监听链切换或账户切换
-    if (window.ethereum) {
-        window.ethereum.on('accountsChanged', () => window.location.reload());
-        window.ethereum.on('chainChanged', () => window.location.reload());
-    }
-</script>
-</body>
-</html>
+}
