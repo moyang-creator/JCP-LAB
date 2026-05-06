@@ -67,7 +67,19 @@
         
         /* 按钮与表单 */
         .input-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        input, select, textarea { flex: 1; border: 1px solid #dcdfe6; border-radius: 5px; padding: 8px; font-size: 0.85rem; outline: none; }
+        /* input, select, textarea { flex: 1; border: 1px solid #dcdfe6; border-radius: 5px; padding: 8px; font-size: 0.85rem; outline: none; } */
+        input, select, textarea { 
+                width: 100%;           /* 核心修改：强制撑开至父容器 100% 宽度 */
+                box-sizing: border-box; /* 核心修改：确保 padding 不会撑破布局 */
+                border: 1px solid #dcdfe6; 
+                border-radius: 5px; 
+                padding: 8px; 
+                font-size: 0.85rem; 
+                outline: none; 
+                display: block;        /* 建议：确保元素独占一行 */
+                margin-bottom: 10px;   /* 建议：与下方按钮保持间距[cite: 5] */
+            }
+
         .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
         .btn-primary { background: var(--accent); color: white; width: 100%; }
         .btn-success { background: var(--success); color: white; }
@@ -126,7 +138,7 @@
                     <span class="config-label">5. 技能市场 (SkillMarket):</span>
                     <a href="#" id="link-market" target="_blank" class="browser-link">🔍 查看</a>
                 </div>
-                <input type="text" id="addr-market" class="config-input" value="0x96C1cD68FFE528656e296988e587001CfE57d77D">
+                <input type="text" id="addr-market" class="config-input" value="0x15EDad51E7316e161Dc24B80cC391Aa7144c63d5">
             </div>
             <div class="config-item">
                 <div class="config-header">
