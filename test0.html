@@ -28,3 +28,37 @@ async function refreshData() {
         log("数据已校准：技能总量已更新。");
     } catch (e) { log(parseError(e, "同步异常"), true); }
 }
+
+async function queryProposal() {
+    try {
+        const id = document.getElementById('search-id').value;
+        if (!id || id <= 0) return log("请输入有效的提案 ID", true);
+        
+        // 调用合约中的 getProposalStatus
+        const data = await contracts.dao.getProposalStatus(id);
+        
+        // 解析返回值[cite: 7]:
+        // data[0]: id, data[1]: summary, data[2]: desc, data[3]: currentTreasury
+        // data[4]: deadline, data[5]: forV, data[6]: againstV, data[7]: state
+        
+        document.getElementById('proposal-info').innerHTML = `
+            <div style="line-height:1.5; font-size:0.8rem;">
+                <div style="margin-bottom:5px;"><b>状态:</b> 
+                    <span class="val" style="color:${data[7]==='Active'?'#f1c40f':'#2ecc71'}">${data[7]}</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); padding:5px; border-radius:4px; margin-bottom:5px;">
+                    <b>摘要:</b> <span style="color:var(--accent)">${data[1]}</span>
+                </div>
+                <b>描述:</b> ${data[2]}<br>
+                <b>赞成:</b> ${parseFloat(ethers.utils.formatEther(data[5])).toFixed(0)} JCP<br>
+                <b>反对:</b> ${parseFloat(ethers.utils.formatEther(data[6])).toFixed(0)} JCP<br>
+                <b>截止区块:</b> ${data[4]}<br>
+                <b>当前国库:</b> <small>${data[3].substring(0,12)}...</small>
+            </div>
+        `;
+        log(`提案 #${id} 详情已载入`);
+    } catch (e) { 
+        log("查询失败：提案 ID 可能不存在或合约地址有误", true); 
+        console.error(e);
+    }
+}

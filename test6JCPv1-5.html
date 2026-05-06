@@ -307,7 +307,16 @@
     const ABI_JCP = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function laborTaxRate() view returns (uint256)","function capitalTaxRate() view returns (uint256)","function setLaborTaxRate(uint256) external","function setCapitalTaxRate(uint256) external","function approve(address, uint256) returns (bool)","function delegate(address) external"];
     const ABI_USD = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function approve(address, uint256) returns (bool)"];
     const ABI_DEX = ["function getPoolStats() view returns (uint256, uint256, uint256, uint256)","function swapJCPForJCPUSD(uint256) external","function swapJCPUSDForJCP(uint256) external","function addLiquidity(uint256, uint256) external","function removeLiquidity(uint256) external"];
-    const ABI_DAO = ["function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
+    //const ABI_DAO = ["function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
+
+    // 修改为合约中实际存在的函数签名
+    const ABI_DAO = [
+        "function propose(uint8, uint256, address, string) external returns (uint256)",
+        "function vote(uint256, bool) external",
+        "function executeProposal(uint256) external",
+        // 对应合约中的 getProposalStatus 函数
+        "function getProposalStatus(uint256) view returns (uint256, string, string, address, uint256, uint256, uint256, string)" 
+    ];
    // const ABI_MARKET = ["function sellSkill(string) external"];
     // 在 <script> 标签顶部的 ABI 定义处修改
     const ABI_MARKET = [
@@ -494,12 +503,38 @@
         } catch (e) { log(parseError(e, "提交失败"), true); }
     }
 
-    async function queryProposal() {
+        async function queryProposal() {
         try {
             const id = document.getElementById('search-id').value;
-            const data = await contracts.dao.checkProposalDashboard(id);
-            document.getElementById('proposal-info').innerHTML = `状态: <b>${data[1]}</b><br>赞成: ${ethers.utils.formatEther(data[2])}<br>反对: ${ethers.utils.formatEther(data[3])}`;
-        } catch (e) { log("查询失败", true); }
+            if (!id || id <= 0) return log("请输入有效的提案 ID", true);
+            
+            // 调用合约中的 getProposalStatus
+            const data = await contracts.dao.getProposalStatus(id);
+            
+            // 解析返回值[cite: 7]:
+            // data[0]: id, data[1]: summary, data[2]: desc, data[3]: currentTreasury
+            // data[4]: deadline, data[5]: forV, data[6]: againstV, data[7]: state
+            
+            document.getElementById('proposal-info').innerHTML = `
+                <div style="line-height:1.5; font-size:0.8rem;">
+                    <div style="margin-bottom:5px;"><b>状态:</b> 
+                        <span class="val" style="color:${data[7]==='Active'?'#f1c40f':'#2ecc71'}">${data[7]}</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.05); padding:5px; border-radius:4px; margin-bottom:5px;">
+                        <b>摘要:</b> <span style="color:var(--accent)">${data[1]}</span>
+                    </div>
+                    <b>描述:</b> ${data[2]}<br>
+                    <b>赞成:</b> ${parseFloat(ethers.utils.formatEther(data[5])).toFixed(0)} JCP<br>
+                    <b>反对:</b> ${parseFloat(ethers.utils.formatEther(data[6])).toFixed(0)} JCP<br>
+                    <b>截止区块:</b> ${data[4]}<br>
+                    <b>当前国库:</b> <small>${data[3].substring(0,12)}...</small>
+                </div>
+            `;
+            log(`提案 #${id} 详情已载入`);
+        } catch (e) { 
+            log("查询失败：提案 ID 可能不存在或合约地址有误", true); 
+            console.error(e);
+        }
     }
 
     async function handleVote(support) {
