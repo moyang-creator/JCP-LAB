@@ -270,6 +270,8 @@
                     <option value="2">2: 修改资本税率</option>
                     <option value="3">3: 更换国库地址</option>
                     <option value="4">4: 发放国库补贴</option>
+                    <option value="5">5: 冻结地址 (加入黑名单)</option> 
+                    <option value="6">6: 解除冻结 (移除黑名单)</option> 
                 </select>
                 <div class="input-row">
                     <input type="number" id="prop-value" placeholder="数值">
@@ -502,8 +504,35 @@
             await tx.wait(); log("提案提交成功");
         } catch (e) { log(parseError(e, "提交失败"), true); }
     }
+    async function handlePropose() {
+        try {
+            const type = document.getElementById('prop-type').value;
+            const val = document.getElementById('prop-value').value;
+            const addr = document.getElementById('prop-addr').value;
+            const desc = document.getElementById('prop-desc').value;
 
-        async function queryProposal() {
+            // 基础参数校验[cite: 7]
+            if (type >= 3 && addr === "0x0000000000000000000000000000000000000000") {
+                throw new Error("此类提案必须指定目标地址");
+            }
+
+            log(`正在发起类型 ${type} 的提案...`);
+            
+            // 调用合约的 propose 函数[cite: 7]
+            const tx = await contracts.dao.propose(
+                type,
+                val,
+                addr,
+                desc
+            );
+            
+            await tx.wait();
+            log("提案已成功广播至链上！提案 ID 请在下方查看或通过区块浏览器确认。");
+            document.getElementById('prop-desc').value = ""; // 清空描述
+        } catch (e) {             log(parseError(e, "发起提案失败"), true);         }
+    }
+
+    async function queryProposal() {
         try {
             const id = document.getElementById('search-id').value;
             if (!id || id <= 0) return log("请输入有效的提案 ID", true);

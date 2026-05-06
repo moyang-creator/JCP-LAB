@@ -62,3 +62,13 @@ async function queryProposal() {
         console.error(e);
     }
 }
+
+<!-- 找到这一段并增加 option 5 和 6 -->
+<select id="prop-type" style="width:100%; margin-bottom:10px;">
+    <option value="1">1: 修改劳动税率 (BP)</option>
+    <option value="2">2: 修改资本税率 (BP)</option>
+    <option value="3">3: 更换国库地址</option>
+    <option value="4">4: 发放国库补贴 (JCP)</option>
+    <option value="5">5: 冻结地址 (加入黑名单)</option> <!-- 新增 -->
+    <option value="6">6: 解除冻结 (移除黑名单)</option> <!-- 新增 -->
+</select>
