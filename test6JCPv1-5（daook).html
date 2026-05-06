@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>JCP 宏观经济实验室 - 综合治理终端 v1.8</title>
+    <title>JCP 宏观经济实验室 - 综合治理终端 v1.7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         :root { 
@@ -23,19 +23,11 @@
         .sidebar-section h4 { font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; margin: 0 0 10px 0; }
         .data-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
         .val { color: var(--success); font-family: 'Courier New', monospace; font-weight: bold; }
-        .clickable-val { cursor: pointer; text-decoration: underline; color: var(--accent); }
         .hint-text { font-size: 0.7rem; color: #bdc3c7; margin-top: 5px; display: block; text-align: center; }
         
-        /* 模态框通用样式 */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+        /* 设置模态框 */
+        #settings-modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
         .modal-content { background: #2c3e50; margin: 3% auto; padding: 25px; border-radius: 12px; width: 550px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .skill-modal-content { width: 800px; max-height: 80vh; overflow-y: auto; }
-        
-        /* 表格样式 */
-        .data-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 10px; }
-        .data-table th, .data-table td { border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px; text-align: left; }
-        .data-table th { color: var(--accent); }
-
         .config-item { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
         .config-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .config-label { font-size: 0.8rem; color: #bdc3c7; }
@@ -69,62 +61,60 @@
 <body>
 
 <!-- 设置模态框 -->
-<div id="settings-modal" class="modal">
+<div id="settings-modal">
     <div class="modal-content">
         <h3 style="margin-top:0; color:var(--accent); display:flex; justify-content:space-between;">
             <span>⚙️ 核心合约地址配置</span>
-            <span style="font-size:0.7rem; color:#95a5a6; font-weight:normal;">2026.5.6 v1.8</span>
+            <span style="font-size:0.7rem; color:#95a5a6; font-weight:normal;">2026.2.13 v1.7</span>
         </h3>
         
         <div id="config-list">
+            <!-- JS 动态渲染或手动维护 -->
             <div class="config-item">
-                <div class="config-header"><span class="config-label">1. JCP 代币合约:</span><a href="#" id="link-jcp" target="_blank" class="browser-link">🔍 查看</a></div>
-                <input type="text" id="addr-jcp" class="config-input" value="0xb7195a16DF4d49Ba337E9dbF0DC5617023587A6d">
+                <div class="config-header">
+                    <span class="config-label">1. JCP 代币合约:</span>
+                    <a href="#" id="link-jcp" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
+                <input type="text" id="addr-jcp" class="config-input" value="0xB7195a16DF4d49Ba337E9dbF0DC5617023587A6d">
             </div>
             <div class="config-item">
-                <div class="config-header"><span class="config-label">2. USD 代币合约:</span><a href="#" id="link-usd" target="_blank" class="browser-link">🔍 查看</a></div>
+                <div class="config-header">
+                    <span class="config-label">2. USD 代币合约:</span>
+                    <a href="#" id="link-usd" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
                 <input type="text" id="addr-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
             </div>
             <div class="config-item">
-                <div class="config-header"><span class="config-label">3. DEX 交易合约:</span><a href="#" id="link-dex" target="_blank" class="browser-link">🔍 查看</a></div>
+                <div class="config-header">
+                    <span class="config-label">3. DEX 交易合约:</span>
+                    <a href="#" id="link-dex" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
                 <input type="text" id="addr-dex" class="config-input" value="0x44c57Df765b369c749A414E79AF06174E6D71fFd">
             </div>
             <div class="config-item">
-                <div class="config-header"><span class="config-label">4. DAO 治理合约:</span><a href="#" id="link-dao" target="_blank" class="browser-link">🔍 查看</a></div>
-                <input type="text" id="addr-dao" class="config-input" value="0x219Ba1eE622011Ff6CEC6DC563e17B8Fed209b62">
+                <div class="config-header">
+                    <span class="config-label">4. DAO 治理合约:</span>
+                    <a href="#" id="link-dao" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
+                <input type="text" id="addr-dao" class="config-input" value="0x38b7e929fe9EdE3596EBF768Fdb417566DF90Dea">
             </div>
             <div class="config-item">
-                <div class="config-header"><span class="config-label">5. 技能市场 (SkillMarket):</span><a href="#" id="link-market" target="_blank" class="browser-link">🔍 查看</a></div>
+                <div class="config-header">
+                    <span class="config-label">5. 技能市场 (SkillMarket):</span>
+                    <a href="#" id="link-market" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
                 <input type="text" id="addr-market" class="config-input" value="0x96C1cD68FFE528656e296988e587001CfE57d77D">
             </div>
             <div class="config-item">
-                <div class="config-header"><span class="config-label">6. JCPTreasury (国库):</span><a href="#" id="link-treasury" target="_blank" class="browser-link">🔍 查看</a></div>
+                <div class="config-header">
+                    <span class="config-label">6. JCPTreasury (国库):</span>
+                    <a href="#" id="link-treasury" target="_blank" class="browser-link">🔍 在浏览器查看</a>
+                </div>
                 <input type="text" id="addr-treasury" class="config-input" value="0xf4a30daf8860FF135fC2D81F5cC54bac88f8BE3c">
             </div>
         </div>
         
         <button onclick="closeSettings()" class="btn btn-primary">💾 保存并应用配置</button>
-    </div>
-</div>
-
-<!-- 技能查看模态框 -->
-<div id="skill-modal" class="modal">
-    <div class="modal-content skill-modal-content">
-        <h3 style="margin-top:0; color:var(--success); display:flex; justify-content:space-between;">
-            <span>📜 学生提交技能全览</span>
-            <span onclick="closeSkillModal()" style="cursor:pointer;">✖</span>
-        </h3>
-        <table class="data-table">
-            <thead>
-                <tr><th>学生</th><th>内容</th><th>时间</th><th>奖励</th></tr>
-            </thead>
-            <tbody id="skill-table-body"></tbody>
-        </table>
-        <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-            <button onclick="changeSkillPage(-1)" class="btn btn-outline" style="width: 100px;">上一页</button>
-            <span id="skill-page-info">第 1 页</span>
-            <button onclick="changeSkillPage(1)" class="btn btn-outline" style="width: 100px;">下一页</button>
-        </div>
     </div>
 </div>
 
@@ -146,7 +136,6 @@
         <div style="border-top:1px solid rgba(255,255,255,0.1); margin:8px 0; padding-top:8px;"></div>        
         <div class="data-row"><span>国库储备 (JCP):</span> <span id="val-treasury-jcp" class="val" style="color:var(--warning);">0.00</span></div>
         <div class="data-row"><span>国库储备 (USD):</span> <span id="val-treasury-usd" class="val">0.00</span></div>
-        <div class="data-row"><span>Skill 提交总量:</span> <span id="val-skill-total" class="val clickable-val" onclick="openSkillModal()">0</span></div>
     </div>    
 
     <div class="sidebar-section" style="border-left: 4px solid var(--success);">
@@ -165,6 +154,7 @@
 </div>
 
 <div class="main-panel">
+    <!-- 技能售卖 -->
     <div class="card">
         <h3>⚒️ 技能售卖终端</h3>
         <p class="card-desc">提交见解获取 JCP，系统自动扣除劳动税。</p>
@@ -172,6 +162,7 @@
         <button onclick="handleSellSkill()" class="btn btn-primary" style="margin-top:10px;">确认提交成果</button>
     </div>
 
+    <!-- 宏观参数修改 -->
     <div class="card">
         <h3>🏛️ 宏观参数控制台</h3>
         <p class="card-desc">直接修改税率 BP（100=1%）。若授权 DAO，此处将锁定。</p>
@@ -185,6 +176,7 @@
         </div>
     </div>
 
+    <!-- Swap 交易 -->
     <div class="card">
         <h3>⚖️ 资产交易 (Swap)</h3>
         <p class="card-desc">基于恒定乘积公式进行即时兑换。</p>
@@ -202,6 +194,7 @@
         <button onclick="handleSwap()" class="btn btn-success" style="width:100%;">立即执行兑换</button>
     </div>
 
+    <!-- 流动性管理 -->
     <div class="card">
         <h3>🌊 流动性池管理</h3>
         <p class="card-desc">注入双端资产以赚取交易手续费。</p>
@@ -213,6 +206,7 @@
         <button onclick="handleLiquidity('remove')" class="btn btn-danger" style="width:100%; margin-top:10px;">提取流动性 (1 LP)</button>
     </div>
 
+    <!-- DAO 治理 -->
     <div class="card dao-card">
         <h3>🗳️ DAO 链上治理中心</h3>
         <div class="dao-grid">
@@ -226,7 +220,7 @@
                 </select>
                 <div class="input-row">
                     <input type="number" id="prop-value" placeholder="数值">
-                    <input type="text" id="prop-addr" placeholder="目标地址" value="0x0000000000000000000000000000000000000000">
+                    <input type="text" id="prop-addr" placeholder="目标地址 (若需)">
                 </div>
                 <textarea id="prop-desc" rows="2" placeholder="提案理由..." style="width:100%; margin-bottom:10px;"></textarea>
                 <button onclick="handlePropose()" class="btn btn-primary">提交提案</button>
@@ -256,15 +250,13 @@
 <script>
     let signer, userAddr;
     let contracts = {};
-    let skillPage = 0;
-    const PAGE_SIZE = 20;
     const EXPLORER_BASE = "https://sepolia.etherscan.io/address/";
 
     const ABI_JCP = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function laborTaxRate() view returns (uint256)","function capitalTaxRate() view returns (uint256)","function setLaborTaxRate(uint256) external","function setCapitalTaxRate(uint256) external","function approve(address, uint256) returns (bool)","function delegate(address) external"];
     const ABI_USD = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function approve(address, uint256) returns (bool)"];
     const ABI_DEX = ["function getPoolStats() view returns (uint256, uint256, uint256, uint256)","function swapJCPForJCPUSD(uint256) external","function swapJCPUSDForJCP(uint256) external","function addLiquidity(uint256, uint256) external","function removeLiquidity(uint256) external"];
-    const ABI_DAO = ["function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function getProposalStatus(uint256) view returns (uint256, string, string, uint256, uint256, uint256, bool, string)", "function proposalCount() view returns (uint256)"];
-    const ABI_MARKET = ["function sellSkill(string) external", "function totalSkillsSubmitted() view returns (uint256)", "function getRecordsPaged(uint256, uint256) view returns (tuple(address student, string content, uint256 timestamp, uint256 reward)[])"];
+    const ABI_DAO = ["function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
+    const ABI_MARKET = ["function sellSkill(string) external"];
 
     function log(msg, isError = false) {
         const div = document.getElementById('console');
@@ -274,22 +266,37 @@
         div.scrollTop = div.scrollHeight;
     }
 
+    // 核心报错解析增强[cite: 1, 2]
     function parseError(e, defaultMsg) {
+        console.error(e);
+        // 1. 尝试直接获取 reason (ethers.js 常用)
         if (e.reason) return `${defaultMsg}: ${e.reason}`;
+        
+        // 2. 尝试从数据中解析 (常见于合约 revert)
         if (e.data && e.data.message) return `${defaultMsg}: ${e.data.message}`;
+        
+        // 3. 深度解析错误字符串内容
         const msg = e.message || "";
-        if (msg.includes("user rejected transaction")) return `${defaultMsg}: 用户取消。`;
+        if (msg.includes("user rejected transaction")) return `${defaultMsg}: 用户取消了交易。`;
+        if (msg.includes("insufficient funds")) return `${defaultMsg}: 账户余额不足以支付 Gas。`;
+        
+        // 尝试匹配 require("报错内容")
+        const revertMatch = msg.match(/reverted with reason string '(.*?)'/);
+        if (revertMatch) return `${defaultMsg}: [合约报错] ${revertMatch[1]}`;
+
         return `${defaultMsg}: ${msg.substring(0, 100)}...`;
     }
 
+    // 设置框逻辑
     function openSettings() {
+        // 更新链接
         ['jcp', 'usd', 'dex', 'dao', 'market', 'treasury'].forEach(key => {
             const addr = document.getElementById(`addr-${key}`).value;
             document.getElementById(`link-${key}`).href = EXPLORER_BASE + addr;
         });
         document.getElementById('settings-modal').style.display = 'block'; 
     }
-    function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; log("配置已更新。"); }
+    function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; log("配置已暂存。"); }
 
     async function initSystem() {
         if (!window.ethereum) return log("未检测到钱包", true);
@@ -305,78 +312,74 @@
             contracts.dao = new ethers.Contract(document.getElementById('addr-dao').value, ABI_DAO, signer);
             contracts.market = new ethers.Contract(document.getElementById('addr-market').value, ABI_MARKET, signer);
 
-            log(`已连接: ${userAddr.substring(0, 8)}...`);
+            log(`钱包已连接: ${userAddr.substring(0, 8)}...`);
             await refreshData();
         } catch (e) { log(parseError(e, "初始化失败"), true); }
     }
 
     async function refreshData() {
-        try {
-            const tAddr = document.getElementById('addr-treasury').value;
-            const [myJ, myU, lT, cT, tsJ, tsU, pool, trJ, trU, skT] = await Promise.all([
-                contracts.jcp.balanceOf(userAddr),
-                contracts.usd.balanceOf(userAddr),
-                contracts.jcp.laborTaxRate(),
-                contracts.jcp.capitalTaxRate(),
-                contracts.jcp.totalSupply(),
-                contracts.usd.totalSupply(),
-                contracts.dex.getPoolStats(),
-                contracts.jcp.balanceOf(tAddr),
-                contracts.usd.balanceOf(tAddr),
-                contracts.market.totalSkillsSubmitted()
-            ]);
+    try {
+        const treasuryAddr = document.getElementById('addr-treasury').value;
+        
+        // 并发查询：确保个人余额和国库余额各归各位
+        const [
+            myJCP,        // 1. 查询当前连接钱包(userAddr)的 JCP
+            myUSD,        // 2. 查询当前连接钱包(userAddr)的 USD
+            laborT,       // 3. JCP 合约内的劳动税率
+            capitalT,     // 4. JCP 合约内的资本税率
+            totalJCP,     // 5. JCP 总发行量
+            totalUSD,     // 6. USD 总发行量
+            pool,         // 7. DEX 池数据
+            treasuryJCP,  // 8. 明确查询：国库地址持有的 JCP [修正项]
+            treasuryUSD   // 9. 明确查询：国库地址持有的 USD [修正项]
+        ] = await Promise.all([
+            contracts.jcp.balanceOf(userAddr),
+            contracts.usd.balanceOf(userAddr),
+            contracts.jcp.laborTaxRate(),
+            contracts.jcp.capitalTaxRate(),
+            contracts.jcp.totalSupply(),
+            contracts.usd.totalSupply(),
+            contracts.dex.getPoolStats(),
+            contracts.jcp.balanceOf(treasuryAddr), // 修正：国库 JCP
+            contracts.usd.balanceOf(treasuryAddr)  // 修正：国库 USD
+        ]);
 
-            document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJ)).toFixed(2);
-            document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(myU)).toFixed(4);
-            document.getElementById('val-tax-labor').innerText = (lT / 100).toFixed(1) + "%";
-            document.getElementById('val-tax-capital').innerText = (cT / 100).toFixed(1) + "%";
-            document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(tsJ));
-            document.getElementById('val-total-usd').innerText = parseFloat(ethers.utils.formatEther(tsU)).toFixed(2);
-            document.getElementById('val-treasury-jcp').innerText = parseFloat(ethers.utils.formatEther(trJ)).toFixed(2);
-            document.getElementById('val-treasury-usd').innerText = parseFloat(ethers.utils.formatEther(trU)).toFixed(2);
-            document.getElementById('val-skill-total').innerText = skT.toString();
-            document.getElementById('val-pool-jcp').innerText = parseFloat(ethers.utils.formatEther(pool[0])).toFixed(2);
-            document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
-            document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
-            
-            log("宏观观测数据已同步。");
-        } catch (e) { log(parseError(e, "同步异常"), true); }
-    }
+        // --- 更新 UI ---
+        
+        // 个人账户区
+        document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJCP)).toFixed(2);
+        document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(myUSD)).toFixed(4);
 
-    // 技能查看逻辑[cite: 3]
-    async function openSkillModal() {
-        document.getElementById('skill-modal').style.display = 'block';
-        skillPage = 0;
-        await loadSkillData();
-    }
-    function closeSkillModal() { document.getElementById('skill-modal').style.display = 'none'; }
-    async function changeSkillPage(delta) {
-        skillPage = Math.max(0, skillPage + delta);
-        await loadSkillData();
-    }
-    async function loadSkillData() {
-        try {
-            const records = await contracts.market.getRecordsPaged(skillPage * PAGE_SIZE, PAGE_SIZE);
-            const tbody = document.getElementById('skill-table-body');
-            tbody.innerHTML = records.map(r => `
-                <tr>
-                    <td>${r.student.substring(0,6)}...</td>
-                    <td title="${r.content}">${r.content.substring(0,25)}...</td>
-                    <td>${new Date(r.timestamp * 1000).toLocaleString()}</td>
-                    <td>${ethers.utils.formatEther(r.reward)} JCP</td>
-                </tr>
-            `).join('') || "<tr><td colspan='4'>暂无数据</td></tr>";
-            document.getElementById('skill-page-info').innerText = `第 ${skillPage + 1} 页`;
-        } catch (e) { log("加载技能数据失败", true); }
-    }
+        // 宏观/政策区
+        document.getElementById('val-tax-labor').innerText = (laborT / 100).toFixed(1) + "%";
+        document.getElementById('val-tax-capital').innerText = (capitalT / 100).toFixed(1) + "%";
+        document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(totalJCP));
+        
+        // 国库区 [修正：增加国库 JCP 的显示支持]
+        if(document.getElementById('val-treasury-jcp')) {
+            document.getElementById('val-treasury-jcp').innerText = parseFloat(ethers.utils.formatEther(treasuryJCP)).toFixed(2);
+        }
+        document.getElementById('val-treasury-usd').innerText = parseFloat(ethers.utils.formatEther(treasuryUSD)).toFixed(2);
+        document.getElementById('val-total-usd').innerText = parseFloat(ethers.utils.formatEther(totalUSD)).toFixed(2);
 
-    // 业务函数
+        // DEX 池区
+        document.getElementById('val-pool-jcp').innerText = parseFloat(ethers.utils.formatEther(pool[0])).toFixed(2);
+        document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
+        document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
+        
+        log("数据已校准：个人与国库账户已区分。");
+    } catch (e) { log(parseError(e, "数据同步异常"), true); }
+}
+
+    // 业务函数[cite: 1, 2]
     async function handleSellSkill() {
         try {
             const txt = document.getElementById('skill-input').value;
-            if(!txt) throw { reason: "内容不能为空" };
+            if(!txt) throw { reason: "请输入技能内容" };
             const tx = await contracts.market.sellSkill(txt);
-            log("技能发送中..."); await tx.wait(); log("成功!"); refreshData();
+            log("交易已发出，等待确认...");
+            await tx.wait();
+            log("技能提交成功，JCP 已入账"); refreshData();
         } catch (e) { log(parseError(e, "提交失败"), true); }
     }
 
@@ -384,22 +387,27 @@
         try {
             const val = document.getElementById(`input-tax-${type}`).value;
             const tx = (type === 'labor') ? await contracts.jcp.setLaborTaxRate(val) : await contracts.jcp.setCapitalTaxRate(val);
-            await tx.wait(); log("税率已调控"); refreshData();
-        } catch (e) { log(parseError(e, "调控失败"), true); }
+            await tx.wait(); log("税率更新成功"); refreshData();
+        } catch (e) { log(parseError(e, "修改失败"), true); }
     }
 
     async function handleApprove(token) {
-        try { const tx = await contracts[token].approve(contracts.dex.address, ethers.constants.MaxUint256); await tx.wait(); log("授权完成"); } catch (e) { log("授权异常", true); }
+        try { 
+            const tx = await contracts[token].approve(contracts.dex.address, ethers.constants.MaxUint256);
+            await tx.wait(); log(`${token.toUpperCase()} 授权成功`); 
+        } catch (e) { log(parseError(e, "授权异常"), true); }
     }
 
     async function handleSwap() {
         try {
             const val = document.getElementById('swap-in-amount').value;
+            if(!val) return log("请输入金额", true);
             const amt = ethers.utils.parseEther(val);
             const type = document.getElementById('swap-type').value;
             const tx = (type === 'jcp2usd') ? await contracts.dex.swapJCPForJCPUSD(amt) : await contracts.dex.swapJCPUSDForJCP(amt);
-            await tx.wait(); log("兑换成功"); refreshData();
-        } catch (e) { log(parseError(e, "Swap异常"), true); }
+            log("兑换处理中...");
+            await tx.wait(); log("交易成功"); refreshData();
+        } catch (e) { log(parseError(e, "交易异常"), true); }
     }
 
     async function handleLiquidity(mode) {
@@ -409,55 +417,48 @@
                 const j = ethers.utils.parseEther(document.getElementById('lp-jcp-amount').value || "0");
                 const u = ethers.utils.parseEther(document.getElementById('lp-usd-amount').value || "0");
                 tx = await contracts.dex.addLiquidity(j, u);
-            } else { tx = await contracts.dex.removeLiquidity(ethers.utils.parseEther("1")); }
+            } else {
+                tx = await contracts.dex.removeLiquidity(ethers.utils.parseEther("1"));
+            }
             await tx.wait(); log("流动性池操作成功"); refreshData();
-        } catch (e) { log("池操作失败", true); }
+        } catch (e) { log(parseError(e, "池操作异常"), true); }
     }
 
-    async function handleDelegate() { try { await (await contracts.jcp.delegate(userAddr)).wait(); log("选票激活"); } catch (e) { log("激活异常", true); } }
+    async function handleDelegate() { try { await (await contracts.jcp.delegate(userAddr)).wait(); log("选票激活成功"); } catch (e) { log(parseError(e, "激活失败"), true); } }
     
     async function handlePropose() {
         try {
             const type = document.getElementById('prop-type').value;
             const val = document.getElementById('prop-value').value;
-            const addr = document.getElementById('prop-addr').value;
+            const addr = document.getElementById('prop-addr').value || ethers.constants.AddressZero;
             const desc = document.getElementById('prop-desc').value;
             const tx = await contracts.dao.propose(type, val, addr, desc);
-            await tx.wait(); log("提案发布"); refreshData();
+            await tx.wait(); log("提案发布成功"); refreshData();
         } catch (e) { log(parseError(e, "发起提案失败"), true); }
     }
 
-    // 强化看板查询[cite: 2]
     async function queryProposal() {
         try {
             const id = document.getElementById('search-id').value;
-            const [pTotal, pData] = await Promise.all([
-                contracts.dao.proposalCount(),
-                contracts.dao.getProposalStatus(id)
-            ]);
-            document.getElementById('proposal-info').innerHTML = `
-                提案总数: <b>${pTotal}</b> <br>
-                状态: <b style="color:var(--accent)">${pData[7]}</b><br>
-                赞成: ${ethers.utils.formatEther(pData[4])} | 反对: ${ethers.utils.formatEther(pData[5])}<br>
-                法定通过: ${pData[6] ? '✅' : '❌'} | 截止: ${pData[3]}
-            `;
-        } catch (e) { log("无法查询该提案ID", true); }
+            const data = await contracts.dao.checkProposalDashboard(id);
+            document.getElementById('proposal-info').innerHTML = `状态: <b>${data[1]}</b><br>赞成票: ${ethers.utils.formatEther(data[2])}<br>反对票: ${ethers.utils.formatEther(data[3])}<br>截止区块: ${data[4]}`;
+        } catch (e) { log(parseError(e, "查询异常"), true); }
     }
 
     async function handleVote(support) {
         try {
             const id = document.getElementById('search-id').value;
             const tx = await contracts.dao.vote(id, support);
-            await tx.wait(); log("投票记录"); queryProposal();
-        } catch (e) { log("投票异常", true); }
+            await tx.wait(); log("投票已送达"); queryProposal();
+        } catch (e) { log(parseError(e, "投票失败"), true); }
     }
 
     async function handleExecute() {
         try {
             const id = document.getElementById('search-id').value;
             const tx = await contracts.dao.executeProposal(id);
-            await tx.wait(); log("已执行"); refreshData();
-        } catch (e) { log("条件不足或执行失败", true); }
+            await tx.wait(); log("提案已生效执行"); refreshData();
+        } catch (e) { log(parseError(e, "执行失败"), true); }
     }
 </script>
 </body>
