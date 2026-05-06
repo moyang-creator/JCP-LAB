@@ -295,7 +295,13 @@
     const ABI_USD = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function approve(address, uint256) returns (bool)"];
     const ABI_DEX = ["function getPoolStats() view returns (uint256, uint256, uint256, uint256)","function swapJCPForJCPUSD(uint256) external","function swapJCPUSDForJCP(uint256) external","function addLiquidity(uint256, uint256) external","function removeLiquidity(uint256) external"];
     const ABI_DAO = ["function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
-    const ABI_MARKET = ["function sellSkill(string) external"];
+   // const ABI_MARKET = ["function sellSkill(string) external"];
+    // 在 <script> 标签顶部的 ABI 定义处修改
+    const ABI_MARKET = [
+    "function sellSkill(string) external",
+    "function totalSkillsSubmitted() view returns (uint256)", // 新增：查询总量
+    "function getRecordsPaged(uint256, uint256) view returns (tuple(address student, string content, uint256 timestamp, uint256 reward)[])" // 新增：分页查询
+];
 
     function log(msg, isError = false) {
         const div = document.getElementById('console');
@@ -316,7 +322,51 @@
     function openSettings() { document.getElementById('settings-modal').style.display = 'block'; }
     function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; log("配置已应用。"); }
     
-    function openSkillModal() { document.getElementById('skill-modal').style.display = 'block'; }
+    //function openSkillModal() { document.getElementById('skill-modal').style.display = 'block'; }
+
+    let currentSkillPage = 1;
+    const pageSize = 10;
+
+    async function openSkillModal() {
+        document.getElementById('skill-modal').style.display = 'block';
+        currentSkillPage = 1;
+        await loadSkillList();
+    }
+
+    async function loadSkillList() {
+        try {
+            const total = parseInt(document.getElementById('val-skill-total').innerText);
+            // 计算偏移量：从后往前取（展示最新的）
+            const offset = Math.max(0, total - currentSkillPage * pageSize);
+            const limit = (total < pageSize) ? total : pageSize;
+
+            // 调用合约分页函数[cite: 6]
+            const records = await contracts.market.getRecordsPaged(offset, limit);
+            
+            const tbody = document.getElementById('skill-table-body');
+            tbody.innerHTML = "";
+            
+            // 合约返回的是数组，倒序排列显示最新的在最上方
+            [...records].reverse().forEach(r => {
+                const row = `<tr>
+                    <td>${r.student.substring(0,6)}...</td>
+                    <td>${r.content}</td>
+                    <td>${new Date(r.timestamp * 1000).toLocaleString()}</td>
+                    <td>${ethers.utils.formatEther(r.reward)} JCP</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            document.getElementById('skill-page-info').innerText = `第 ${currentSkillPage} 页`;
+        } catch (e) { log(parseError(e, "加载记录失败"), true); }
+    }
+
+    async function changeSkillPage(delta) {
+        if (currentSkillPage + delta < 1) return;
+        currentSkillPage += delta;
+        await loadSkillList();
+    }
+
     function closeSkillModal() { document.getElementById('skill-modal').style.display = 'none'; }
     function changeSkillPage(delta) { log("分页功能待合约数据支持"); }
 
@@ -342,7 +392,7 @@
     async function refreshData() {
         try {
             const treasuryAddr = document.getElementById('addr-treasury').value;
-            const [myJ, myU, laborT, capitalT, totalJ, totalU, pool, tJCP, tUSD] = await Promise.all([
+            const [myJ, myU, laborT, capitalT, totalJ, totalU, pool, tJCP, tUSD, skillTotal] = await Promise.all([
                 contracts.jcp.balanceOf(userAddr),
                 contracts.usd.balanceOf(userAddr),
                 contracts.jcp.laborTaxRate(),
@@ -351,7 +401,8 @@
                 contracts.usd.totalSupply(),
                 contracts.dex.getPoolStats(),
                 contracts.jcp.balanceOf(treasuryAddr),
-                contracts.usd.balanceOf(treasuryAddr)
+                contracts.usd.balanceOf(treasuryAddr),
+                contracts.market.totalSkillsSubmitted()
             ]);
 
             document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJ)).toFixed(2);
@@ -366,6 +417,7 @@
             document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
             document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
             log("同步成功。");
+            document.getElementById('val-skill-total').innerText = skillTotal.toString();
         } catch (e) { log(parseError(e, "同步异常"), true); }
     }
 
