@@ -1,0 +1,114 @@
+## 17.16. JCP v6实验：铸造 NFT（图片永久存储在 Arweave）
+
+### 17.16.1. 实验目的
+1. 理解 ERC-721 非同质化代币标准的核心概念。
+2. 学会将图片和元数据永久存储到 **Arweave**（去中心化、永久存储网络）。
+3. 使用 OpenZeppelin 快速开发 NFT 合约并部署到 Sepolia 测试网。
+4. 在 OpenSea 测试网查看并分享自己铸造的 NFT。
+
+
+### 17.16.2. 实验准备（课前完成）
+
+1. **MetaMask 钱包**：已添加 **Sepolia 测试网** 并切换到该网络。
+2. **测试网 ETH**：从 [Sepolia Faucet](https://sepoliafaucet.com/) 领取测试 ETH。
+3. **一张你喜欢的图片**（JPG/PNG 格式，建议 < 2MB）。
+4. **Remix IDE**：打开 [https://remix.ethereum.org/](https://remix.ethereum.org/)。
+5. **Arweave 上传工具**：推荐使用 [ArDrive](https://ardrive.io/)（最友好）或 [arweave.net](https://arweave.net/) 官方上传页面（免费）。
+
+
+
+### 17.16.3. 实验步骤
+
+#### 17.16.3.1. 步骤 1：将图片上传到 Arweave（永久存储）
+
+1. 打开 [ArDrive](https://ardrive.io/) 并连接 MetaMask（使用 Sepolia 测试网或 Arweave 主网均可）。
+2. 上传你的图片文件。
+3. 上传成功后，复制 **Arweave Transaction ID**（TxID），格式类似：
+   ```
+   https://arweave.net/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   ```
+   记下这个 TxID，我们后面会用到。
+
+#### 17.16.3.2. 步骤 2：创建并上传 NFT 元数据到 Arweave
+
+1. 在本地创建一个 `metadata.json` 文件，内容如下（替换你的图片 TxID）：
+
+```json
+{
+  "name": "我的第一个 Arweave NFT",
+  "description": "这是我在《区块链金融》课程中铸造的 NFT，图片永久存储在 Arweave",
+  "image": "arweave://你的图片TxID"
+}
+```
+
+2. 使用 ArDrive 再次上传这个 `metadata.json` 文件，获得其 TxID。
+
+3. 最终你的 NFT 元数据链接将是：
+   ```
+   https://arweave.net/你的metadataTxID
+   ```
+
+#### 17.16.3.3. 步骤 3：编写 ERC-721 NFT 合约
+
+在 Remix 中新建文件 `MyArweaveNFT.sol`，复制以下完整代码：
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyArweaveNFT is ERC721, Ownable {
+    uint256 private _nextTokenId;
+
+    constructor() ERC721("MyArweaveNFT", "MANFT") Ownable(msg.sender) {}
+
+    /**
+     * @dev 铸造 NFT（只有合约拥有者可以调用）
+     */
+    function safeMint(address to) public onlyOwner {
+        uint256 tokenId = _nextTokenId++;
+        _safeMint(to, tokenId);
+    }
+
+    /**
+     * @dev 设置 NFT 元数据基础 URI（指向 Arweave）
+     */
+    function _baseURI() internal pure override returns (string memory) {
+        return "https://arweave.net/";
+    }
+}
+```
+
+#### 17.16.3.4. 步骤 4：部署合约到 Sepolia 测试网
+
+1. 编译器选择 **0.8.20**。
+2. 编译 `MyArweaveNFT.sol`。
+3. 在 **Deploy & Run Transactions** 面板：
+   - Environment 选择 **Injected Provider - MetaMask**
+   - Contract 选择 **MyArweaveNFT**
+   - 点击 **Deploy**
+4. 确认 MetaMask 交易，记录部署后的合约地址。
+
+#### 17.16.3.5. 步骤 5：铸造 NFT
+
+1. 在 Remix 的 Deployed Contracts 中找到刚部署的合约。
+2. 调用 `safeMint` 函数，`to` 填入你的 MetaMask 地址。
+3. 确认交易，记录 Mint 成功的 Token ID（通常是 0）。
+
+#### 17.16.3.6. 步骤 6：在 OpenSea 测试网查看 NFT
+
+1. 打开 [OpenSea 测试网](https://testnets.opensea.io/)
+2. 搜索你的合约地址。
+3. 查看 Token ID 为 0 的 NFT（图片应从 Arweave 加载）。
+
+
+### 17.16.4. 实验报告要求（提交到课程平台）
+
+实验完成后，你就拥有了一个**图片永久存储在 Arweave**、**永久存在于以太坊测试网**的真正 NFT！在JPCV2（业务TOKENING化）实验中，输入“序号+姓名+部署到 Sepolia 测试网的合约地址”作为答案，以方便教师查看作业成果。
+ 
+
+**实验注意事项**：
+- 所有操作在 **Sepolia 测试网** 完成。
+- Arweave 存储是永久的，图片和元数据不会消失。
