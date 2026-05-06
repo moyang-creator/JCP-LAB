@@ -2,64 +2,105 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>JCP 宏观经济实验室 - 综合治理终端 v2.0</title>
+    <title>JCP 宏观经济实验室 - 综合治理终端 v1.9</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
     <style>
         :root { 
-            --sidebar-bg: #2c3e50; 
+            --sidebar-bg: #1a252f; 
             --card-bg: #ffffff; 
             --main-bg: #f4f7f6; 
             --accent: #3498db;
             --success: #2ecc71;
             --danger: #e74c3c;
-            --warning: #f1c40f;
+            --warning: #f39c12;
             --purple: #9b59b6;
-            --gray: #95a5a6;
         }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; background: var(--main-bg); color: #333; overflow: hidden; }
         
-        /* 侧边栏布局优化 */
-        .sidebar { width: 320px; background: #1a252f; color: #ecf0f1; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
-        .sidebar h2 { font-size: 1.3rem; color: var(--accent); margin: 0 0 20px 0; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
-        .sidebar-section { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .sidebar-section h4 { font-size: 0.8rem; color: var(--gray); text-transform: uppercase; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; }
-        .data-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; }
-        .data-row.clickable { cursor: pointer; transition: 0.2s; padding: 4px 8px; border-radius: 4px; margin: 0 -8px; }
-        .data-row.clickable:hover { background: rgba(155, 89, 182, 0.2); }
-        .val { font-family: 'Consolas', monospace; font-weight: bold; color: var(--success); }
-
-        /* 主面板与卡片 */
-        .main-panel { flex: 1; padding: 25px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto 1fr; gap: 20px; overflow-y: auto; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); position: relative; border-top: 5px solid var(--accent); }
-        .card h3 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        /* 侧边栏 */
+        .sidebar { width: 300px; background: var(--sidebar-bg); color: #ecf0f1; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; border-right: 1px solid #34495e; flex-shrink: 0; }
+        .sidebar h2 { font-size: 1.2rem; color: var(--accent); margin-top: 0; display: flex; align-items: center; gap: 10px; }
+        .sidebar-section { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 15px; }
+        .sidebar-section h4 { font-size: 0.75rem; color: #95a5a6; text-transform: uppercase; margin: 0 0 10px 0; }
+        .data-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+        .data-row.clickable { cursor: pointer; transition: background 0.2s; padding: 2px 5px; border-radius: 4px; }
+        .data-row.clickable:hover { background: rgba(155, 89, 182, 0.3); }
+        .val { color: var(--success); font-family: 'Courier New', monospace; font-weight: bold; }
         
-        /* 输入与按钮组 */
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 0.9rem; }
-        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
-        .btn { border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.3s; color: white; display: flex; align-items: center; justify-content: center; }
-        .btn-primary { background: var(--accent); }
-        .btn-success { background: var(--success); }
-        .btn-danger { background: var(--danger); }
-        .btn-warning { background: var(--warning); color: #333; }
-        .btn-gray { background: #7f8c8d; }
-        .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        /* 模态框通用样式 */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
+        .modal-content { background: #2c3e50; margin: 3% auto; padding: 25px; border-radius: 12px; width: 550px; color: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; }
+        
+        /* 技能列表专用 */
+        .skill-list-container { max-height: 400px; overflow-y: auto; background: #f8f9fa; border-radius: 8px; padding: 10px; margin-top: 15px; color: #333; }
+        .skill-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        .skill-item:last-child { border: none; }
+        .skill-meta { font-size: 0.7rem; color: #95a5a6; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .pagination { display: flex; justify-content: center; gap: 15px; margin-top: 15px; align-items: center; }
 
-        /* 模态框 */
-        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
-        .modal-content { background: white; margin: 5% auto; padding: 25px; border-radius: 12px; width: 650px; position: relative; }
-        .skill-list { max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; margin: 15px 0; }
-        .skill-item { padding: 12px; border-bottom: 1px solid #f9f9f9; }
-        .skill-item:nth-child(even) { background: #fcfcfc; }
-
-        /* 控制台 */
-        #console { grid-column: span 2; background: #2b2b2b; color: #a9b7c6; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 13px; height: 180px; overflow-y: auto; border-left: 5px solid var(--accent); }
+        /* 原有布局样式保持不变 */
+        .config-item { margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .config-input { width: 100%; background: #34495e; border: 1px solid #455a64; color: #fff; padding: 8px; font-size: 12px; border-radius: 4px; box-sizing: border-box; }
+        .main-panel { flex: 1; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto 1fr; gap: 20px; overflow-y: auto; }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 4px solid var(--accent); }
+        .btn { border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 0.85rem; transition: all 0.2s; }
+        .btn-primary { background: var(--accent); color: white; width: 100%; }
+        .dao-card { grid-column: span 2; border-top-color: var(--purple); }
+        .dao-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+        #console { grid-column: span 2; background: #1c2022; color: #a9b7c6; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 12px; height: 160px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
-<!-- 侧边栏 -->
+<!-- 设置模态框 -->
+<div id="settings-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:var(--accent);">⚙️ 核心合约地址配置</h3>
+        <div id="config-list">
+            <div class="config-item"><span>JCP:</span><input type="text" id="addr-jcp" class="config-input" value="0xb1b96f98cF89e7621dCc36e06E09457DAF28E8CB"></div>
+            <div class="config-item"><span>USD:</span><input type="text" id="addr-usd" class="config-input" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2"></div>
+            <div class="config-item"><span>DEX:</span><input type="text" id="addr-dex" class="config-input" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436"></div>
+            <div class="config-item"><span>DAO:</span><input type="text" id="addr-dao" class="config-input" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69"></div>
+            <div class="config-item"><span>Market:</span><input type="text" id="addr-market" class="config-input" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2"></div>
+            <div class="config-item"><span>Treasury:</span><input type="text" id="addr-treasury" class="config-input" value="0xf4a30daf8860FF135fC2D81F5cC54bac88f8BE3c"></div>
+        </div>
+        <button onclick="closeSettings()" class="btn btn-primary">💾 保存应用</button>
+    </div>
+</div>
+
+<!-- 技能数据分页窗口 -->
+<div id="skill-data-modal" class="modal">
+    <div class="modal-content" style="width: 700px;">
+        <h3 style="margin-top:0; color:var(--purple); display:flex; justify-content:space-between;">
+            <span>🔬 已提交技能数据库</span>
+            <span id="skill-page-info" style="font-size:0.8rem; font-weight:normal;">Page 1</span>
+        </h3>
+        <div class="skill-list-container" id="skill-list-view">
+            加载数据中...
+        </div>
+        <div class="pagination">
+            <button onclick="changeSkillPage(-1)" class="btn btn-outline" style="padding:5px 15px;">⬅️ 上一页</button>
+            <button onclick="changeSkillPage(1)" class="btn btn-outline" style="padding:5px 15px;">下一页 ➡️</button>
+            <button onclick="document.getElementById('skill-data-modal').style.display='none'" class="btn btn-danger" style="margin-left:auto;">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- 提案详情弹窗 -->
+<div id="proposal-detail-modal" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-top:0; color:var(--success);">📑 提案详细信息卡</h3>
+        <div id="detail-content" style="background:#fff; color:#333; padding:15px; border-radius:8px; margin-top:10px;"></div>
+        <div style="margin-top:20px; display:flex; gap:10px;">
+            <button onclick="handleVote(true)" class="btn btn-success" style="flex:1;">👍 赞成</button>
+            <button onclick="handleVote(false)" class="btn btn-danger" style="flex:1;">👎 反对</button>
+            <button onclick="document.getElementById('proposal-detail-modal').style.display='none'" class="btn btn-outline">取消</button>
+        </div>
+    </div>
+</div>
+
 <div class="sidebar">
-    <h2>🧬 宏观经济观测站</h2>
+    <h2>📊 经济系统观测站</h2>
     
     <div class="sidebar-section">
         <h4>👤 个人账户</h4>
@@ -71,267 +112,246 @@
         <h4>🏛️ 宏观/政策状态</h4>
         <div class="data-row"><span>劳动税率:</span> <span id="val-tax-labor" class="val">0.0%</span></div>
         <div class="data-row"><span>资本税率:</span> <span id="val-tax-capital" class="val">0.0%</span></div>
-        <!-- 核心新增项：点击弹出分页列表 -->
-        <div class="data-row clickable" onclick="openSkillModal()">
+        <!-- 强化交互：点击弹出技能库 -->
+        <div class="data-row clickable" onclick="openSkillDataModal()">
             <span>已提技能总数:</span> 
             <span id="val-total-skills" class="val" style="color:var(--purple); text-decoration: underline;">0</span>
         </div>
         <div class="data-row"><span>JCP 总供应:</span> <span id="val-total-supply" class="val">0</span></div>
         <div class="data-row"><span>USD 发行总量:</span> <span id="val-total-usd" class="val">0.00</span></div>
-        <hr style="opacity:0.1">
+        <div style="border-top:1px solid rgba(255,255,255,0.1); margin:8px 0; padding-top:8px;"></div>        
         <div class="data-row"><span>国库储备 (JCP):</span> <span id="val-treasury-jcp" class="val" style="color:var(--warning);">0.00</span></div>
         <div class="data-row"><span>国库储备 (USD):</span> <span id="val-treasury-usd" class="val">0.00</span></div>
-    </div>
+    </div>    
 
     <div class="sidebar-section" style="border-left: 4px solid var(--success);">
         <h4>🌊 DEX 流动性池</h4>
         <div class="data-row"><span>池内 JCP:</span> <span id="val-pool-jcp" class="val">0.00</span></div>
         <div class="data-row"><span>池内 USD:</span> <span id="val-pool-usd" class="val">0.00</span></div>
-        <div class="data-row"><span>汇率 (USD/JCP):</span> <span id="val-price" class="val">0.0000</span></div>
+        <div class="data-row"><span>汇率 (USD/JCP):</span> <span id="val-price" class="val">0.00</span></div>
     </div>
 
     <div class="sidebar-section">
-        <h4>🛠️ 系统管理</h4>
-        <button onclick="openSettings()" class="btn btn-warning" style="width:100%; margin-bottom:10px;">⚙️ 核心合约配置 (6)</button>
-        <button onclick="initSystem()" class="btn btn-primary" style="width:100%;">🔄 启动连接与同步</button>
+        <button onclick="initSystem()" class="btn btn-primary">🔄 启动连接与同步</button>
+        <button onclick="openSettings()" class="btn btn-warning" style="width:100%; font-size:0.8rem; margin-top:10px;">⚙️ 核心配置</button>
     </div>
 </div>
 
-<!-- 主面板 -->
 <div class="main-panel">
-    <!-- 资产交易：恢复授权键 -->
-    <div class="card" style="border-top-color: var(--accent);">
+    <div class="card">
+        <h3>⚒️ 技能售卖终端</h3>
+        <textarea id="skill-input" rows="3" placeholder="输入您的研究成果..."></textarea>
+        <button onclick="handleSellSkill()" class="btn btn-primary" style="margin-top:10px;">确认提交成果</button>
+    </div>
+
+    <div class="card">
+        <h3>🏛️ 宏观参数控制台</h3>
+        <div class="input-row" style="display:flex; gap:10px; margin-bottom:10px;">
+            <input type="number" id="input-tax-labor" placeholder="劳动税率 (BP)">
+            <button onclick="updateTax('labor')" class="btn btn-outline" style="flex:0.6;">更新劳动税</button>
+        </div>
+        <div class="input-row" style="display:flex; gap:10px;">
+            <input type="number" id="input-tax-capital" placeholder="资本税率 (BP)">
+            <button onclick="updateTax('capital')" class="btn btn-outline" style="flex:0.6;">更新资本税</button>
+        </div>
+    </div>
+
+    <div class="card">
         <h3>⚖️ 资产交易 (Swap)</h3>
-        <p style="font-size:0.8rem; color:var(--gray);">基于恒定乘积公式进行即时兑换。</p>
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <input type="number" id="swap-amount" placeholder="数量" style="flex:2;">
-            <select id="swap-type" style="flex:1;">
-                <option value="jcp2usd">JCP ➡️ USD</option>
-                <option value="usd2jcp">USD ➡️ JCP</option>
-            </select>
+        <div class="input-row" style="display:flex; gap:10px; margin-bottom:10px;">
+            <input type="number" id="swap-in-amount" placeholder="数量">
+            <select id="swap-type"><option value="jcp2usd">JCP ➡️ USD</option><option value="usd2jcp">USD ➡️ JCP</option></select>
         </div>
-        <div class="btn-group">
-            <button onclick="handleApprove('jcp')" class="btn btn-gray" style="flex:1;">授权 JCP</button>
-            <button onclick="handleApprove('usd')" class="btn btn-gray" style="flex:1;">授权 USD</button>
-        </div>
-        <button onclick="handleSwap()" class="btn btn-success" style="width:100%; margin-top:10px; height:45px;">立即执行兑换</button>
+        <button onclick="handleSwap()" class="btn btn-success" style="width:100%;">立即兑换</button>
     </div>
 
-    <!-- 流动性管理：恢复提取键 -->
-    <div class="card" style="border-top-color: #34495e;">
+    <div class="card">
         <h3>🌊 流动性池管理</h3>
-        <p style="font-size:0.8rem; color:var(--gray);">注入双端资产以赚取交易手续费。</p>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <input type="number" id="lp-jcp" placeholder="JCP 数量">
-            <input type="number" id="lp-usd" placeholder="USD 数量">
+        <div class="input-row" style="display:flex; gap:10px; margin-bottom:10px;">
+            <input type="number" id="lp-jcp-amount" placeholder="JCP 数量">
+            <input type="number" id="lp-usd-amount" placeholder="USD 数量">
         </div>
-        <button onclick="handleLiquidity('add')" class="btn btn-success" style="width:100%; margin-bottom:10px;">注入流动性</button>
-        <button onclick="handleLiquidity('remove')" class="btn btn-danger" style="width:100%;">提取流动性 (全部 LP)</button>
+        <button onclick="handleLiquidity('add')" class="btn btn-success" style="width:100%;">注入流动性</button>
     </div>
 
-    <!-- DAO 治理：恢复激活键 -->
-    <div class="card" style="grid-column: span 2; border-top-color: var(--purple);">
-        <h3>🗳️ DAO 链上治理中心</h3>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
-            <div>
+    <div class="card dao-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:#f8f9fa; padding:10px; border-radius:6px;">
+            <h3 style="margin:0; border:none;">🗳️ DAO 治理中心</h3>
+            <span style="font-weight:bold; color:var(--purple);">提案总数: <span id="val-prop-count">0</span></span>
+        </div>
+        <div class="dao-grid">
+            <div class="dao-action">
                 <h4>📜 发起新提案</h4>
-                <select id="prop-type" style="margin-bottom:10px;">
-                    <option value="1">1: 修改劳动税率</option>
-                    <option value="2">2: 修改资本税率</option>
-                    <option value="4">4: 发放国库补贴</option>
+                <select id="prop-type" style="width:100%; margin-bottom:10px;">
+                    <option value="1">1: 修改劳动税率</option><option value="2">2: 修改资本税率</option>
+                    <option value="3">3: 更换国库地址</option><option value="4">4: 发放国库补贴</option>
+                    <option value="5">5: 冻结账户</option><option value="6">6: 解冻账户</option>
                 </select>
                 <div style="display:flex; gap:10px; margin-bottom:10px;">
-                    <input type="number" id="prop-val" placeholder="目标数值">
-                    <input type="text" id="prop-addr" placeholder="目标地址 (若需)">
+                    <input type="number" id="prop-value" placeholder="数值">
+                    <input type="text" id="prop-addr" placeholder="目标地址">
                 </div>
-                <textarea id="prop-desc" rows="2" placeholder="提案理由..." style="margin-bottom:10px;"></textarea>
-                <button onclick="handlePropose()" class="btn btn-primary" style="width:100%; margin-bottom:8px;">提交提案</button>
-                <button onclick="handleDelegate()" class="btn btn-gray" style="width:100%;">激活投票 (Delegate Self)</button>
+                <textarea id="prop-desc" rows="2" placeholder="提案理由..." style="width:100%; margin-bottom:10px;"></textarea>
+                <button onclick="handlePropose()" class="btn btn-primary">提交提案</button>
             </div>
-            <div style="border-left:1px solid #eee; padding-left:20px;">
+            <div class="dao-monitor" style="border-left:1px solid #eee; padding-left:20px;">
                 <h4>📊 看板 & 投票</h4>
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <input type="number" id="search-id" placeholder="输入提案 ID">
-                    <button onclick="queryProposal()" class="btn btn-gray">查询</button>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="number" id="search-id" placeholder="输入 ID">
+                    <button onclick="queryProposal()" class="btn btn-primary">查询并投票</button>
                 </div>
-                <div id="proposal-card" style="background:#f8f9fa; padding:15px; border-radius:8px; font-size:0.85rem; margin-bottom:15px; border:1px dashed #ccc;">
-                    等待查询提案信息...
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button onclick="handleVote(true)" class="btn btn-success" style="flex:1;">赞成</button>
-                    <button onclick="handleVote(false)" class="btn btn-danger" style="flex:1;">反对</button>
-                    <button onclick="handleExecute()" class="btn btn-primary" style="flex:2;">执行通过的提案</button>
-                </div>
+                <div id="proposal-info" style="font-size:0.8rem; background:#f9f9f9; padding:10px; border-radius:5px; min-height:60px; margin-bottom:10px; border:1px dashed #ccc;">等待查询...</div>
+                <button onclick="handleExecute()" class="btn btn-outline" style="width:100%;">执行通过的提案</button>
             </div>
         </div>
     </div>
 
-    <div id="console">> 系统就绪，请启动连接...</div>
-</div>
-
-<!-- 技能数据库模态框[cite: 4] -->
-<div id="skill-modal" class="modal">
-    <div class="modal-content">
-        <h3 style="color:var(--purple);">🔬 已提交科研成果数据库</h3>
-        <div class="skill-list" id="skill-display-area">加载中...</div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <button onclick="changeSkillPage(-1)" class="btn btn-gray" style="padding:5px 15px;">上一页</button>
-                <span id="page-num" style="margin:0 15px; font-weight:bold;">第 1 页</span>
-                <button onclick="changeSkillPage(1)" class="btn btn-gray" style="padding:5px 15px;">下一页</button>
-            </div>
-            <button onclick="closeSkillModal()" class="btn btn-danger">关闭窗口</button>
-        </div>
-    </div>
-</div>
-
-<!-- 配置窗口略 (保持原有 ID) -->
-<div id="settings-modal" class="modal">
-    <div class="modal-content" style="width:450px;">
-        <h3>⚙️ 合约地址配置</h3>
-        <div id="config-fields">
-            JCP: <input type="text" id="addr-jcp" value="0xb1b96f98cF89e7621dCc36e06E09457DAF28E8CB">
-            USD: <input type="text" id="addr-usd" value="0x843e84b5F223d1D7Dd89d0A06427C9A2E408D1B2">
-            DEX: <input type="text" id="addr-dex" value="0x5bC1215000D04c4E584C93144B5c9f0BA4C25436">
-            DAO: <input type="text" id="addr-dao" value="0x0b3Ad31cE77D4A8671D3B9578D650a00D7318d69">
-            Market: <input type="text" id="addr-market" value="0x20CC5DF025C20E4e0e6b0267a4d1b9f598685AA2">
-            Treasury: <input type="text" id="addr-treasury" value="0xf4a30daf8860FF135fC2D81F5cC54bac88f8BE3c">
-        </div>
-        <button onclick="closeSettings()" class="btn btn-primary" style="width:100%; margin-top:15px;">💾 保存并关闭</button>
-    </div>
+    <div id="console">> 系统待机...</div>
 </div>
 
 <script>
     let signer, userAddr;
     let contracts = {};
-    let skillPage = 1;
-    const SKILL_PER_PAGE = 5;
+    let currentSkillPage = 1;
+    const pageSize = 5;
 
-    const ABI_ERC20 = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function approve(address, uint256) returns (bool)","function delegate(address) external"];
-    const ABI_JCP = [...ABI_ERC20, "function laborTaxRate() view returns (uint256)", "function capitalTaxRate() view returns (uint256)"];
-    const ABI_DEX = ["function getPoolStats() view returns (uint256, uint256, uint256, uint256)", "function swapJCPForJCPUSD(uint256) external", "function swapJCPUSDForJCP(uint256) external", "function addLiquidity(uint256, uint256) external", "function removeLiquidity(uint256) external"];
-    const ABI_DAO = ["function proposalCount() view returns (uint256)", "function propose(uint8, uint256, address, string) external returns (uint256)", "function vote(uint256, bool) external", "function executeProposal(uint256) external", "function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
-    const ABI_MARKET = ["function skillCount() view returns (uint256)", "function getSkill(uint256) view returns (address, string, uint256)"];
+    const ABI_JCP = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function laborTaxRate() view returns (uint256)","function capitalTaxRate() view returns (uint256)","function setLaborTaxRate(uint256) external","function setCapitalTaxRate(uint256) external","function approve(address, uint256) returns (bool)","function delegate(address) external"];
+    const ABI_USD = ["function balanceOf(address) view returns (uint256)","function totalSupply() view returns (uint256)","function approve(address, uint256) returns (bool)"];
+    const ABI_DEX = ["function getPoolStats() view returns (uint256, uint256, uint256, uint256)","function swapJCPForJCPUSD(uint256) external","function swapJCPUSDForJCP(uint256) external","function addLiquidity(uint256, uint256) external","function removeLiquidity(uint256) external"];
+    const ABI_DAO = ["function proposalCount() view returns (uint256)","function propose(uint8, uint256, address, string) external returns (uint256)","function vote(uint256, bool) external","function executeProposal(uint256) external","function checkProposalDashboard(uint256) view returns (string, string, uint256, uint256, uint256, string)"];
+    // 适配带查询功能的 Market
+    const ABI_MARKET = ["function skillCount() view returns (uint256)","function sellSkill(string) external","function getSkill(uint256) view returns (address, string, uint256)"];
 
-    function log(m, err=false) {
-        const c = document.getElementById('console');
-        c.innerHTML += `<div style="color:${err?'#ff6b6b':'#a9b7c6'}">[${new Date().toLocaleTimeString()}] ${m}</div>`;
-        c.scrollTop = c.scrollHeight;
+    function log(msg, isError = false) {
+        const div = document.getElementById('console');
+        div.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${isError ? '<span style="color:#ff6b6b">'+msg+'</span>' : msg}</div>`;
+        div.scrollTop = div.scrollHeight;
     }
 
     async function initSystem() {
-        if (!window.ethereum) return alert("请安装 MetaMask");
+        if (!window.ethereum) return log("未发现钱包", true);
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddr = await signer.getAddress();
         
         contracts.jcp = new ethers.Contract(document.getElementById('addr-jcp').value, ABI_JCP, signer);
-        contracts.usd = new ethers.Contract(document.getElementById('addr-usd').value, ABI_ERC20, signer);
+        contracts.usd = new ethers.Contract(document.getElementById('addr-usd').value, ABI_USD, signer);
         contracts.dex = new ethers.Contract(document.getElementById('addr-dex').value, ABI_DEX, signer);
         contracts.dao = new ethers.Contract(document.getElementById('addr-dao').value, ABI_DAO, signer);
         contracts.market = new ethers.Contract(document.getElementById('addr-market').value, ABI_MARKET, signer);
 
-        log("系统连接成功: " + userAddr);
+        log(`连接成功: ${userAddr.substring(0,6)}...`);
         refreshData();
-        setInterval(refreshData, 10000);
     }
 
     async function refreshData() {
         try {
-            const tAddr = document.getElementById('addr-treasury').value;
-            const [bJ, bU, lT, cT, sJ, sU, pool, tJ, tU, sCount] = await Promise.all([
+            const treasuryAddr = document.getElementById('addr-treasury').value;
+            const [myJCP, myUSD, laborT, capitalT, totalJCP, totalUSD, pool, tJCP, tUSD, sCount, pCount] = await Promise.all([
                 contracts.jcp.balanceOf(userAddr), contracts.usd.balanceOf(userAddr),
                 contracts.jcp.laborTaxRate(), contracts.jcp.capitalTaxRate(),
                 contracts.jcp.totalSupply(), contracts.usd.totalSupply(),
-                contracts.dex.getPoolStats(), contracts.jcp.balanceOf(tAddr),
-                contracts.usd.balanceOf(tAddr), contracts.market.skillCount()
+                contracts.dex.getPoolStats(), contracts.jcp.balanceOf(treasuryAddr),
+                contracts.usd.balanceOf(treasuryAddr), contracts.market.skillCount(), 
+                contracts.dao.proposalCount()
             ]);
 
-            document.getElementById('val-my-jcp').innerText = ethers.utils.formatEther(bJ);
-            document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(bU)).toFixed(4);
-            document.getElementById('val-tax-labor').innerText = (lT/100).toFixed(1) + "%";
-            document.getElementById('val-tax-capital').innerText = (cT/100).toFixed(1) + "%";
+            document.getElementById('val-my-jcp').innerText = parseFloat(ethers.utils.formatEther(myJCP)).toFixed(2);
+            document.getElementById('val-my-usd').innerText = parseFloat(ethers.utils.formatEther(myUSD)).toFixed(4);
+            document.getElementById('val-tax-labor').innerText = (laborT / 100).toFixed(1) + "%";
+            document.getElementById('val-tax-capital').innerText = (capitalT / 100).toFixed(1) + "%";
             document.getElementById('val-total-skills').innerText = sCount.toString();
-            document.getElementById('val-pool-jcp').innerText = ethers.utils.formatEther(pool[0]);
-            document.getElementById('val-pool-usd').innerText = ethers.utils.formatEther(pool[1]);
-            document.getElementById('val-price').innerText = ethers.utils.formatUnits(pool[3], 18);
-        } catch(e) { console.error(e); }
+            document.getElementById('val-total-supply').innerText = Math.floor(ethers.utils.formatEther(totalJCP));
+            document.getElementById('val-treasury-jcp').innerText = parseFloat(ethers.utils.formatEther(tJCP)).toFixed(2);
+            document.getElementById('val-treasury-usd').innerText = parseFloat(ethers.utils.formatEther(tUSD)).toFixed(2);
+            document.getElementById('val-total-usd').innerText = parseFloat(ethers.utils.formatEther(totalUSD)).toFixed(2);
+            document.getElementById('val-pool-jcp').innerText = parseFloat(ethers.utils.formatEther(pool[0])).toFixed(2);
+            document.getElementById('val-pool-usd').innerText = parseFloat(ethers.utils.formatEther(pool[1])).toFixed(2);
+            document.getElementById('val-price').innerText = parseFloat(ethers.utils.formatUnits(pool[3], 18)).toFixed(4);
+            document.getElementById('val-prop-count').innerText = pCount.toString();
+        } catch (e) { console.error(e); }
     }
 
-    // --- 恢复的核心业务函数 ---
-    async function handleApprove(token) {
-        const contract = token === 'jcp' ? contracts.jcp : contracts.usd;
-        const tx = await contract.approve(contracts.dex.address, ethers.constants.MaxUint256);
-        log(`${token.toUpperCase()} 授权中...`);
-        await tx.wait();
-        log(`${token.toUpperCase()} 授权成功`);
+    // --- 技能数据库分页逻辑 ---
+    async function openSkillDataModal() {
+        document.getElementById('skill-data-modal').style.display = 'block';
+        currentSkillPage = 1;
+        loadSkillPage();
     }
 
-    async function handleSwap() {
-        const amt = ethers.utils.parseEther(document.getElementById('swap-amount').value);
-        const type = document.getElementById('swap-type').value;
-        const tx = type === 'jcp2usd' ? await contracts.dex.swapJCPForJCPUSD(amt) : await contracts.dex.swapJCPUSDForJCP(amt);
-        log("交易处理中...");
-        await tx.wait();
-        log("兑换成功");
-        refreshData();
-    }
-
-    async function handleLiquidity(action) {
-        if(action === 'add') {
-            const tx = await contracts.dex.addLiquidity(
-                ethers.utils.parseEther(document.getElementById('lp-jcp').value),
-                ethers.utils.parseEther(document.getElementById('lp-usd').value)
-            );
-            await tx.wait(); log("注入流动性成功");
-        } else {
-            const tx = await contracts.dex.removeLiquidity(ethers.constants.MaxUint256); // 示例为移除全部
-            await tx.wait(); log("流动性已提取");
-        }
-        refreshData();
-    }
-
-    async function handleDelegate() {
-        const tx = await contracts.jcp.delegate(userAddr);
-        log("激活投票权中...");
-        await tx.wait();
-        log("投票权已激活");
-    }
-
-    // --- 技能库分页逻辑 ---
-    async function openSkillModal() {
-        document.getElementById('skill-modal').style.display = 'block';
-        skillPage = 1;
-        loadSkillData();
-    }
-
-    async function loadSkillData() {
-        const area = document.getElementById('skill-display-area');
-        area.innerHTML = "正在查询链上数据...";
-        const total = (await contracts.market.skillCount()).toNumber();
+    async function loadSkillPage() {
+        const view = document.getElementById('skill-list-view');
+        const pageInfo = document.getElementById('skill-page-info');
+        view.innerHTML = "正在调取链上数据...";
         
-        let start = total - (skillPage - 1) * SKILL_PER_PAGE;
-        let end = Math.max(1, start - SKILL_PER_PAGE + 1);
-        
-        let html = "";
-        for(let i = start; i >= end; i--) {
-            const s = await contracts.market.getSkill(i);
-            html += `<div class="skill-item">
-                <small style="color:var(--gray)">#${i} | 贡献者: ${s[0].substring(0,10)}...</small><br>
-                <strong>${s[1]}</strong>
-            </div>`;
+        try {
+            const total = await contracts.market.skillCount();
+            const totalNum = total.toNumber();
+            if (totalNum === 0) {
+                view.innerHTML = "<div style='text-align:center;padding:20px;'>暂无提交数据</div>";
+                return;
+            }
+
+            // 计算分页索引
+            let start = totalNum - (currentSkillPage - 1) * pageSize;
+            let end = Math.max(1, start - pageSize + 1);
+            
+            let html = "";
+            for (let i = start; i >= end; i--) {
+                const skill = await contracts.market.getSkill(i); // [user, content, timestamp]
+                html += `
+                    <div class="skill-item">
+                        <div class="skill-meta">
+                            <span>ID: #${i} | 贡献者: ${skill[0].substring(0,10)}...</span>
+                            <span>时间戳: ${new Date(skill[2].toNumber()*1000).toLocaleString()}</span>
+                        </div>
+                        <div style="font-weight:500; color:#2c3e50;">${skill[1]}</div>
+                    </div>
+                `;
+            }
+            view.innerHTML = html;
+            pageInfo.innerText = `Page ${currentSkillPage} (Total: ${totalNum})`;
+        } catch (e) { 
+            view.innerHTML = `<span style="color:red">加载失败: 请确保合约包含 getSkill(uint256) 函数</span>`;
         }
-        area.innerHTML = html || "暂无记录";
-        document.getElementById('page-num').innerText = `第 ${skillPage} 页`;
     }
 
     function changeSkillPage(dir) {
-        skillPage = Math.max(1, skillPage + dir);
-        loadSkillData();
+        if (currentSkillPage + dir < 1) return;
+        currentSkillPage += dir;
+        loadSkillPage();
     }
 
-    function closeSkillModal() { document.getElementById('skill-modal').style.display = 'none'; }
+    // --- 其他业务逻辑保持不变 ---
+    async function handleSellSkill() {
+        const tx = await contracts.market.sellSkill(document.getElementById('skill-input').value);
+        await tx.wait(); log("提交成功"); refreshData();
+    }
+
+    async function queryProposal() {
+        const id = document.getElementById('search-id').value;
+        const data = await contracts.dao.checkProposalDashboard(id);
+        document.getElementById('proposal-info').innerHTML = `状态: <b>${data[1]}</b><br>赞成: ${ethers.utils.formatEther(data[2])}`;
+        document.getElementById('detail-content').innerHTML = `
+            <p><b>类型:</b> ${data[0]} | <b>状态:</b> ${data[1]}</p>
+            <p><b>描述:</b> ${data[5]}</p>
+            <p><b>截止区块:</b> ${data[4]}</p>
+        `;
+        document.getElementById('proposal-detail-modal').style.display = 'block';
+    }
+
+    async function handleVote(s) {
+        const tx = await contracts.dao.vote(document.getElementById('search-id').value, s);
+        document.getElementById('proposal-detail-modal').style.display = 'none';
+        await tx.wait(); log("投票成功"); queryProposal();
+    }
+
+    async function handlePropose() {
+        const tx = await contracts.dao.propose(document.getElementById('prop-type').value, document.getElementById('prop-value').value, document.getElementById('prop-addr').value || ethers.constants.AddressZero, document.getElementById('prop-desc').value);
+        await tx.wait(); log("提案发布成功"); refreshData();
+    }
+
     function openSettings() { document.getElementById('settings-modal').style.display = 'block'; }
     function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; }
 </script>
