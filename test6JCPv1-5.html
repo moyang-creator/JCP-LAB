@@ -157,12 +157,12 @@
 <div id="skill-modal" class="modal">
     <div class="modal-content skill-modal-content">
         <h3 style="margin-top:0; color:var(--success); display:flex; justify-content:space-between;">
-            <span>📜 学生提交技能全览</span>
+            <span>📜 所提交技能全览</span>
             <span onclick="closeSkillModal()" style="cursor:pointer;">✖</span>
         </h3>
         <table class="data-table">
             <thead>
-                <tr><th>学生</th><th>内容</th><th>时间</th><th>奖励</th></tr>
+                <tr><th>学生</th><th>技能内容</th><th>时间</th><th>奖励</th></tr>
             </thead>
             <tbody id="skill-table-body"></tbody>
         </table>
@@ -180,7 +180,7 @@
     <div class="sidebar-section">
         <h4>👤 个人账户</h4>
         <div class="data-row"><span>我的 JCP:</span> <span id="val-my-jcp" class="val">0.00</span></div>
-        <div class="data-row"><span>我的 USD:</span> <span id="val-my-usd" class="val">0.00</span></div>
+        <div class="data-row"><span>我的 JCPUSD:</span> <span id="val-my-usd" class="val">0.00</span></div>
     </div>
 
     <div class="sidebar-section">
@@ -213,7 +213,7 @@
 
 <div class="main-panel">
     <div class="card">
-        <h3>⚒️ 技能售卖终端</h3>
+        <h3>⚒️ 技能售卖终端（Toking化）</h3>
         <p class="card-desc">提交见解获取 JCP，系统自动扣除劳动税。</p>
         <textarea id="skill-input" rows="3" placeholder="输入您的研究成果或代码片段..."></textarea>
         <button onclick="handleSellSkill()" class="btn btn-primary" style="margin-top:10px;">确认提交成果</button>
@@ -233,7 +233,7 @@
     </div>
 
     <div class="card">
-        <h3>⚖️ 资产交易 (Swap)</h3>
+        <h3>⚖️ 去中心化资产交易所 (DEX)</h3>
         <p class="card-desc">即时兑换资产。</p>
         <div class="input-row">
             <input type="number" id="swap-in-amount" placeholder="数量">
