@@ -431,8 +431,64 @@
 
     function closeSkillModal() { document.getElementById('skill-modal').style.display = 'none'; }
 
+    // Sepolia 网络配置
+    const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111
+    
+    async function checkAndSwitchNetwork() {
+        if (!window.ethereum) return false;
+        try {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const network = await provider.getNetwork();
+            const chainId = '0x' + network.chainId.toString(16).toLowerCase();
+            
+            if (chainId === SEPOLIA_CHAIN_ID) {
+                return true;
+            }
+            
+            // 不是 Sepolia，尝试切换
+            log("正在切换到 Sepolia 测试网...", false);
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: SEPOLIA_CHAIN_ID }]
+                });
+                return true;
+            } catch (switchError) {
+                // 链不存在，添加 Sepolia
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: SEPOLIA_CHAIN_ID,
+                                chainName: 'Sepolia Test Network',
+                                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                                rpcUrls: ['https://rpc.sepolia.org'],
+                                blockExplorerUrls: ['https://sepolia.etherscan.io']
+                            }]
+                        });
+                        return true;
+                    } catch (addError) {
+                        log("添加 Sepolia 网络失败，请手动切换", true);
+                        return false;
+                    }
+                }
+                log("切换网络被拒绝，请手动切换到 Sepolia", true);
+                return false;
+            }
+        } catch (e) {
+            log("网络检测失败: " + e.message, true);
+            return false;
+        }
+    }
+
     async function initSystem() {
-        if (!window.ethereum) return log("未检测到钱包", true);
+        if (!window.ethereum) return log("未检测到钱包，请安装 MetaMask", true);
+        
+        // 检查并切换网络
+        const networkOk = await checkAndSwitchNetwork();
+        if (!networkOk) return;
+        
         try {
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             await provider.send("eth_requestAccounts", []);
@@ -445,7 +501,7 @@
             contracts.dao = new ethers.Contract(document.getElementById('addr-dao').value, ABI_DAO, signer);
             contracts.market = new ethers.Contract(document.getElementById('addr-market').value, ABI_MARKET, signer);
 
-            log(`钱包已连接: ${userAddr.substring(0, 8)}...`);
+            log(`钱包已连接 (Sepolia): ${userAddr.substring(0, 8)}...`);
             await refreshData();
         } catch (e) { log(parseError(e, "初始化失败"), true); }
     }
