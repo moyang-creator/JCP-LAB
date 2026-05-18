@@ -149,7 +149,11 @@
             </div>
         </div>
         
-        <button onclick="closeSettings()" class="btn btn-primary">💾 保存并应用配置</button>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="saveSettings()" class="btn btn-primary">💾 保存并应用配置</button>
+            <button onclick="loadAddresses()" class="btn btn-outline">📂 载入地址</button>
+            <input type="file" id="load-addr-file" accept=".txt" style="display:none" onchange="handleLoadFile(event)">
+        </div>
     </div>
 </div>
 
@@ -347,7 +351,80 @@
     }
 
     function openSettings() { document.getElementById('settings-modal').style.display = 'block'; }
-    function closeSettings() { document.getElementById('settings-modal').style.display = 'none'; log("配置已应用。"); }
+    
+    function saveSettings() {
+        const addrs = {
+            jcp: document.getElementById('addr-jcp').value,
+            usd: document.getElementById('addr-usd').value,
+            dex: document.getElementById('addr-dex').value,
+            dao: document.getElementById('addr-dao').value,
+            market: document.getElementById('addr-market').value,
+            treasury: document.getElementById('addr-treasury').value,
+            timestamp: new Date().toISOString()
+        };
+        
+        // 保存到本地存储
+        localStorage.setItem('jcp-addresses', JSON.stringify(addrs));
+        
+        // 下载配置文件
+        const txt = `JCP 实验配置 (${addrs.timestamp})
+================================
+1. JCP 代币: ${addrs.jcp}
+2. USD 代币: ${addrs.usd}
+3. DEX: ${addrs.dex}
+4. DAO: ${addrs.dao}
+5. SkillMarket: ${addrs.market}
+6. Treasury: ${addrs.treasury}
+`;
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `jcp-config-${new Date().toISOString().slice(0,10)}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        document.getElementById('settings-modal').style.display = 'none';
+        log("配置已保存并下载配置文件");
+    }
+    
+    function loadAddresses() {
+        document.getElementById('load-addr-file').click();
+    }
+    
+    function handleLoadFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            // 尝试从文本中提取地址
+            const addrMatch = (label) => {
+                const regex = new RegExp(label + ':\\s*(0x[a-fA-F0-9]{40})', 'i');
+                const match = content.match(regex);
+                return match ? match[1] : null;
+            };
+            
+            const jcp = addrMatch('JCP 代币') || addrMatch('JCP');
+            const usd = addrMatch('USD 代币') || addrMatch('USD');
+            const dex = addrMatch('DEX');
+            const dao = addrMatch('DAO');
+            const market = addrMatch('SkillMarket') || addrMatch('Market');
+            const treasury = addrMatch('Treasury') || addrMatch('国库');
+            
+            if (jcp) document.getElementById('addr-jcp').value = jcp;
+            if (usd) document.getElementById('addr-usd').value = usd;
+            if (dex) document.getElementById('addr-dex').value = dex;
+            if (dao) document.getElementById('addr-dao').value = dao;
+            if (market) document.getElementById('addr-market').value = market;
+            if (treasury) document.getElementById('addr-treasury').value = treasury;
+            
+            log("地址已从文件载入");
+        };
+        reader.readAsText(file);
+        event.target.value = ''; // 重置以便重复选择同一文件
+    }
     
     //function openSkillModal() { document.getElementById('skill-modal').style.display = 'block'; }
 
