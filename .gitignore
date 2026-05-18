@@ -1,0 +1,8 @@
+.osgrep
+dist/
+node_modules/
+*.exe
+*.dll
+*.pak
+*.dat
+*.asar
