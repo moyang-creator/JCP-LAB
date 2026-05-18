@@ -156,9 +156,12 @@
 <!-- 技能查看模态框 - 修正结构定位[cite: 4] -->
 <div id="skill-modal" class="modal">
     <div class="modal-content skill-modal-content">
-        <h3 style="margin-top:0; color:var(--success); display:flex; justify-content:space-between;">
+        <h3 style="margin-top:0; color:var(--success); display:flex; justify-content:space-between; align-items:center;">
             <span>📜 所提交技能全览</span>
-            <span onclick="closeSkillModal()" style="cursor:pointer;">✖</span>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button onclick="downloadAllSkills()" class="btn btn-outline" style="padding:5px 10px; font-size:12px;">📥 下载全部</button>
+                <span onclick="closeSkillModal()" style="cursor:pointer;">✖</span>
+            </div>
         </h3>
         <table class="data-table">
             <thead>
@@ -389,6 +392,41 @@
         if (currentSkillPage + delta < 1) return;
         currentSkillPage += delta;
         await loadSkillList();
+    }
+
+    async function downloadAllSkills() {
+        try {
+            const total = parseInt(document.getElementById('val-skill-total').innerText);
+            log(`正在下载全部 ${total} 条记录...`);
+            
+            // 分页获取所有记录
+            let allRecords = [];
+            const pageSize = 50;
+            for (let offset = 0; offset < total; offset += pageSize) {
+                const limit = Math.min(pageSize, total - offset);
+                const records = await contracts.market.getRecordsPaged(offset, limit);
+                allRecords = allRecords.concat([...records]);
+            }
+            
+            // 生成 CSV
+            const headers = ['学生地址', '技能内容', '时间', '奖励(JCP)'];
+            const rows = allRecords.map(r => [
+                r.student,
+                `"${r.content.replace(/"/g, '""')}"`,
+                new Date(r.timestamp * 1000).toLocaleString(),
+                ethers.utils.formatEther(r.reward)
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `skills_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log(`已下载 ${allRecords.length} 条记录`);
+        } catch (e) { log(parseError(e, "下载失败"), true); }
     }
 
     function closeSkillModal() { document.getElementById('skill-modal').style.display = 'none'; }
